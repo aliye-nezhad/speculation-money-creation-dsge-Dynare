@@ -1,4 +1,4 @@
-# Speculation, Bank Money Creation, and Output in a DSGE Model 
+# Speculation, Bank Money Creation, and Output in a DSGE Model  
 
 ## Overview
 
