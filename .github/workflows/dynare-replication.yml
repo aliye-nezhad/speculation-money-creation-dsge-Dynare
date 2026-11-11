@@ -24,6 +24,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      - name: Verify committed DSGE source files are unchanged
+        run: |
+          git fetch origin main --depth=1
+          git diff --exit-code origin/main -- models/*.mod
+
       - name: Install pinned Dynare runtime
         run: |
           sudo apt-get update
