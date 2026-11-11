@@ -5,8 +5,8 @@
 The GitHub Actions workflow executes the four committed Dynare model files in
 a clean Ubuntu 24.04 environment using MATLAB R2023b and the Ubuntu
 `dynare=6.0-1` package. It does not claim to recreate the original MATLAB
-R2017a / Dynare 4.6.4 environment. MATLAB is the only model-execution
-environment used by this automated workflow; Octave is not used.
+R2017a / Dynare 4.6.4 environment. All automated model execution is
+performed in MATLAB R2023b.
 
 The workflow:
 
