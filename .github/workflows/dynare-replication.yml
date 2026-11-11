@@ -31,19 +31,28 @@ jobs:
 
       - name: Install MATLAB runtime dependencies
         run: |
-          for attempt in 1 2 3; do
-            if timeout 5m sudo env DEBIAN_FRONTEND=noninteractive apt-get update \
-              -o Acquire::Retries=3 \
-              -o Acquire::http::Timeout=30 \
-              -o Acquire::https::Timeout=30; then
+          mirror_ok=0
+          for mirror in \
+            https://mirrors.edge.kernel.org/ubuntu \
+            https://ftp.lysator.liu.se/ubuntu \
+            https://mirror.ossplanet.net/ubuntu; do
+            printf '%s\n' "$mirror" | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+            if timeout 3m sudo env DEBIAN_FRONTEND=noninteractive apt-get update \
+              -o APT::Update::Error-Mode=any \
+              -o Acquire::Retries=1 \
+              -o Acquire::http::Timeout=20 \
+              -o Acquire::https::Timeout=20; then
+              echo "Using Ubuntu package mirror: $mirror"
+              mirror_ok=1
               break
             fi
-            if [ "$attempt" -eq 3 ]; then
-              echo "Unable to update Ubuntu package indexes after three attempts."
-              exit 1
-            fi
-            sleep 15
+            echo "Mirror unavailable; trying the next Ubuntu mirror."
           done
+
+          if [ "$mirror_ok" -ne 1 ]; then
+            echo "Unable to update Ubuntu package indexes from the configured mirrors."
+            exit 1
+          fi
 
           timeout 10m sudo env DEBIAN_FRONTEND=noninteractive apt-get install \
             --yes --no-install-recommends \
