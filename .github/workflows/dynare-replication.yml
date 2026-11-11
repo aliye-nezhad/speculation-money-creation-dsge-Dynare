@@ -44,10 +44,12 @@ jobs:
           timeout 10m sudo env DEBIAN_FRONTEND=noninteractive apt-get install \
             --yes --no-install-recommends dynare=6.0-1 dynare-matlab=6.0-1 gnuplot-nox ghostscript
 
-          DYNARE_PATH="$(dpkg -L dynare-matlab | grep '/matlab
+          DYNARE_PATH="$(dirname "$(dpkg -L dynare-matlab | grep '/dynare.m$' | head -n 1)")"
           test -n "$DYNARE_PATH"
           test -f "$DYNARE_PATH/dynare.m"
-          test -x "$DYNARE_PATH/../preprocessor/dynare-preprocessor"
+          DYNARE_PREPROCESSOR="$(dpkg -L dynare | grep '/dynare-preprocessor$' | head -n 1)"
+          test -n "$DYNARE_PREPROCESSOR"
+          test -x "$DYNARE_PREPROCESSOR"
           echo "DYNARE_PATH=$DYNARE_PATH" >> "$GITHUB_ENV"
 
           SYSTEM_LIBSTDCXX="$(ldconfig -p | grep 'libstdc++.so.6' | grep 'x86-64' | awk '{print $NF; exit}')"
