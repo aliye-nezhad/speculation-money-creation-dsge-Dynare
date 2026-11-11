@@ -119,8 +119,16 @@ try
             error('%s: steady-state output is missing or non-finite.', model_file);
         end
         if ~isfield(oo_, 'dr') || ~isfield(oo_.dr, 'eigval') || ...
-                isempty(oo_.dr.eigval) || any(~isfinite(oo_.dr.eigval(:)))
-            error('%s: decision-rule eigenvalues are missing or non-finite.', model_file);
+                isempty(oo_.dr.eigval) || any(isnan(oo_.dr.eigval(:))) || ...
+                ~any(isfinite(oo_.dr.eigval(:)))
+            error('%s: decision-rule eigenvalues are missing or contain NaN values.', model_file);
+        end
+        % Infinite generalized eigenvalues can be valid when the denominator
+        % of the generalized Schur pair is zero. Check the solved decision
+        % rule itself for finite values instead of rejecting those roots.
+        if ~isfield(oo_.dr, 'ghx') || ~isfield(oo_.dr, 'ghu') || ...
+                any(~isfinite(oo_.dr.ghx(:))) || any(~isfinite(oo_.dr.ghu(:)))
+            error('%s: decision-rule matrices are missing or non-finite.', model_file);
         end
         if ~isfield(oo_, 'irfs')
             error('%s: Dynare did not produce impulse responses.', model_file);
