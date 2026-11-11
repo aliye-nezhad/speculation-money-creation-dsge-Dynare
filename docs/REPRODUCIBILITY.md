@@ -9,21 +9,22 @@ GNU Octave. It does not claim to recreate the original MATLAB R2017a / Dynare
 
 The workflow:
 
-1. Installs the pinned Ubuntu Dynare package and headless plotting tools.
-2. Records the Octave and Dynare versions.
-3. Runs all four scenario-specific model files.
-4. Checks that each model has 20 endogenous variables and 20 equations,
+1. Verifies with Git that no committed `.mod` file differs from `main`.
+2. Installs the pinned Ubuntu Dynare package and headless plotting tools.
+3. Records the Octave and Dynare versions.
+4. Runs all four scenario-specific model files using temporary copies.
+5. Checks that each model has 20 endogenous variables and 20 equations,
    finite steady-state values, finite decision-rule eigenvalues, and all four
    required 40-period impulse responses.
-5. Creates disposable copies of the four committed `.mod` files in
+6. Creates disposable copies of the four committed `.mod` files in
    `outputs/replication/runtime_workspace/`. The only compatibility
    substitution is `resid(1);` to `resid;` in those temporary copies. The
    committed research source files remain unchanged.
-6. Exports the four period-by-period IRF tables and first-period impact-response
+7. Exports the four period-by-period IRF tables and first-period impact-response
    summary.
-7. Independently recomputes the period-1 impact responses from the exported IRFs and
+8. Independently recomputes the period-1 impact responses from the exported IRFs and
    compares them with the historical summary table.
-8. Uploads generated outputs and logs as a GitHub Actions artifact.
+9. Uploads generated outputs and logs as a GitHub Actions artifact.
 
 ## Dynare 6 diagnostic compatibility
 
