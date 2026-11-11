@@ -91,9 +91,11 @@ speculation-money-creation-dsge-dynare/
 
 The repository includes a GitHub Actions workflow that runs all four
 calibrations in a clean Ubuntu 24.04 / MATLAB R2024b / Dynare 6.0-1
-environment. It checks model dimensions, finite steady-state and
-decision-rule outputs, 40-period impulse responses, and first-period impact
-responses against the historical summary table. The committed DSGE model
+environment. It checks model dimensions, finite steady-state values and decision-rule
+matrices, nonempty generalized-eigenvalue output with no NaNs and at least one
+finite value (valid infinite generalized roots are allowed), 40-period impulse
+responses, and first-period impact responses against the historical summary
+table. The committed DSGE model
 files remain unchanged; Dynare 6 compatibility is isolated to disposable
 runtime copies. This is a modern MATLAB execution check, not an exact
 recreation of the original MATLAB R2017a / Dynare 4.6.4 environment.
