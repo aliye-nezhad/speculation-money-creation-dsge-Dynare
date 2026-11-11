@@ -108,15 +108,15 @@ The model was historically run with:
 - Dynare 4.6.4;
 - MATLAB R2017a.
 
-The automated compatibility workflow also executes the models under GNU
-Octave 8.4.0 and Dynare 6.0 on Ubuntu 24.04. This is a modern compatibility
-test, not an exact recreation of the historical MATLAB/Dynare environment.
+The automated workflow executes the models under MATLAB R2023b and Dynare
+6.0-1 on Ubuntu 24.04. Dynare 6 compatibility is applied only to disposable
+runtime copies; the committed model files retain their original syntax.
 Consult the current [Dynare documentation](https://www.dynare.org/manual/)
 for installation and version-specific guidance.
 
 ## Reproduction
 
-Add Dynare to the MATLAB or Octave path, open the repository root, and run:
+Add the Dynare MATLAB directory to the MATLAB path, open the repository root, and run:
 
 ```matlab
 run('replication/run_all.m')
