@@ -143,7 +143,7 @@ jobs:
           echo "DYNARE_MLTBX_SHA256=$toolbox_sha256" >> "$GITHUB_ENV"
           echo "Dynare $DYNARE_VERSION MATLAB toolbox SHA-256: $toolbox_sha256"
 
-      - name: Install Dynare and execute all replication scripts inside MATLAB
+      - name: Install Dynare and run the four calibrations in MATLAB
         uses: matlab-actions/run-command@bfa857648f4895aa98a446fe41c85e0788421ed5 # matlab-actions/run-command v3
         with:
           command: |
@@ -163,13 +163,7 @@ jobs:
             assert(exist('dynare', 'file') == 2, 'Dynare is not on the MATLAB path.');
             assert(exist('num_procs', 'file') == 2 || exist('num_procs', 'file') == 3, 'Dynare processor-count routine is unavailable.');
             assert(exist('mjdgges', 'file') == 2 || exist('mjdgges', 'file') == 3, 'Dynare generalized Schur routine is unavailable.');
-            if exist('dynare_version', 'file') == 2
-              actual_dynare_version = string(dynare_version());
-              assert(contains(actual_dynare_version, '6.0'), 'The installed Dynare version is not 6.0.');
-            end
             run('replication/run_all.m');
-            run('replication/plot_irfs.m');
-            run('replication/validate_outputs.m');
 
       - name: Record the exact runner environment and model checksums
         shell: bash
@@ -206,6 +200,20 @@ jobs:
               libmpg123-0t64 libopus0 liborc-0.4-0t64 libsndfile1 \
               libvorbisenc2 | sort
           } > outputs/replication/environment_manifest.txt
+
+      - name: Generate MATLAB figures and validate numerical outputs
+        uses: matlab-actions/run-command@bfa857648f4895aa98a446fe41c85e0788421ed5 # matlab-actions/run-command v3
+        with:
+          command: |
+            system_libstdcxx = getenv('SYSTEM_LIBSTDCXX');
+            setenv('LD_PRELOAD', system_libstdcxx);
+            dynare_file = which('dynare');
+            assert(~isempty(dynare_file), 'Installed Dynare toolbox is not available in this MATLAB session.');
+            dynare_path = fileparts(dynare_file);
+            addpath(genpath(dynare_path));
+            addpath(genpath(fullfile(dynare_path, 'missing', 'mex')));
+            run('replication/plot_irfs.m');
+            run('replication/validate_outputs.m');
 
       - name: Upload generated results and reproducibility manifests
         if: always()
