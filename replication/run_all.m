@@ -1,4 +1,4 @@
-% Run all four historical loan-allocation calibrations and export IRFs.
+% Run all four historical loan-allocation calibrations and export every IRF.
 % The committed DSGE model files are never edited by this runner.
 % Dynare 6 compatibility is applied only to disposable runtime copies in MATLAB.
 
@@ -7,15 +7,22 @@ repository_root = fileparts(fileparts(script_path));
 models_directory = fullfile(repository_root, 'models');
 outputs_directory = fullfile(repository_root, 'outputs', 'replication');
 runtime_directory = fullfile(outputs_directory, 'runtime_workspace');
+figure_directory = fullfile(outputs_directory, 'figures');
 original_directory = pwd;
 
 if exist(outputs_directory, 'dir') ~= 7
     mkdir(outputs_directory);
 end
 
-% Remove status files from earlier executions so a failed run cannot leave
-% an old success manifest or validation report looking current.
-stale_status_files = {'runtime_manifest.txt', 'validation_report.txt'};
+% Remove status and generated data from earlier executions. A failed run must
+% never leave stale files that could be mistaken for current successful output.
+stale_status_files = {
+    'runtime_manifest.txt'
+    'environment_manifest.txt'
+    'source_model_sha256.txt'
+    'validation_report.txt'
+    'irf_impact_summary.csv'
+};
 for k = 1:numel(stale_status_files)
     stale_path = fullfile(outputs_directory, stale_status_files{k});
     if exist(stale_path, 'file') == 2
@@ -23,7 +30,16 @@ for k = 1:numel(stale_status_files)
     end
 end
 
-% Recreate the disposable runtime workspace to prevent stale model output.
+stale_irf_files = dir(fullfile(outputs_directory, 'irfs_q*.csv'));
+for k = 1:numel(stale_irf_files)
+    delete(fullfile(outputs_directory, stale_irf_files(k).name));
+end
+
+if exist(figure_directory, 'dir') == 7
+    rmdir(figure_directory, 's');
+end
+
+% Recreate the disposable runtime workspace to prevent stale Dynare output.
 if exist(runtime_directory, 'dir') == 7
     rmdir(runtime_directory, 's');
 end
@@ -39,7 +55,12 @@ model_files = {
     'speculation_money_creation_q08.mod'
 };
 q_values = [0.2, 0.4, 0.6, 0.8];
-irf_names = {'M_EEPSILONIS', 'Y_EEPSILONIS', 'P_EEPSILONIS', 'PPI_EEPSILONIS'};
+core_irf_names = {'M_EEPSILONIS', 'Y_EEPSILONIS', 'P_EEPSILONIS', 'PPI_EEPSILONIS'};
+expected_endogenous_names = {
+    'A', 'K', 'N', 'M', 'PPI', 'W', 'C', 'R', 'P', 'Y', ...
+    'IS', 'IL', 'O', 'T', 'IIP', 'II', 'IP', 'B', 'G', 'IT'
+};
+expected_irf_names = strcat(expected_endogenous_names, '_EEPSILONIS');
 irf_horizon = 40;
 
 % Create runtime copies. The sole compatibility edit is to a diagnostic
@@ -95,12 +116,6 @@ end
 fprintf(summary_fid, 'q,impact_M_pct,impact_Y_pct,impact_P_pct,impact_PPI_pct\n');
 fclose(summary_fid);
 
-% Delete prior IRFs so failed runs cannot leave stale files that look current.
-stale_files = dir(fullfile(outputs_directory, 'irfs_q*.csv'));
-for k = 1:numel(stale_files)
-    delete(fullfile(outputs_directory, stale_files(k).name));
-end
-
 try
     cd(runtime_directory);
 
@@ -111,8 +126,8 @@ try
         % noclearall preserves this runner's loop variables between Dynare calls.
         dynare(model_file, 'noclearall');
 
-        if ~exist('M_', 'var') || M_.endo_nbr ~= 20 || M_.eq_nbr ~= 20
-            error('%s: expected 20 endogenous variables and 20 model equations.', model_file);
+        if ~exist('M_', 'var') || M_.endo_nbr ~= 20 || M_.eq_nbr ~= 20 || M_.exo_nbr ~= 2
+            error('%s: expected 20 endogenous variables, 20 equations, and 2 shocks.', model_file);
         end
         if ~exist('oo_', 'var') || ~isfield(oo_, 'steady_state') || ...
                 any(~isfinite(oo_.steady_state(:)))
@@ -134,14 +149,20 @@ try
             error('%s: Dynare did not produce impulse responses.', model_file);
         end
 
-        irf_matrix = zeros(irf_horizon, numel(irf_names));
-        impact_pct = zeros(1, numel(irf_names));
+        % Export all 20 endogenous responses to the speculative-return shock,
+        % not just the four series used in the historical impact table.
+        response_fields = fieldnames(oo_.irfs);
+        response_fields = response_fields(endsWith(response_fields, '_EEPSILONIS'));
+        response_fields = sort(response_fields);
 
-        for j = 1:numel(irf_names)
-            name = irf_names{j};
-            if ~isfield(oo_.irfs, name)
-                error('%s: required IRF %s is missing.', model_file, name);
-            end
+        if numel(response_fields) ~= M_.endo_nbr || ...
+                ~isequal(response_fields(:), sort(expected_irf_names(:)))
+            error('%s: expected exactly the 20 endogenous EEPSILONIS responses.', model_file);
+        end
+
+        irf_matrix = zeros(irf_horizon, numel(response_fields));
+        for j = 1:numel(response_fields)
+            name = response_fields{j};
             response = oo_.irfs.(name);
             response = response(:);
 
@@ -151,8 +172,17 @@ try
             end
 
             irf_matrix(:, j) = response;
-            % Historical source figures report first-period impact responses.
-            impact_pct(j) = response(1) * 100;
+        end
+
+        impact_pct = zeros(1, numel(core_irf_names));
+        for j = 1:numel(core_irf_names)
+            column_index = find(strcmp(response_fields, core_irf_names{j}), 1);
+            if isempty(column_index)
+                error('%s: required historical series %s is missing.', ...
+                    model_file, core_irf_names{j});
+            end
+            % Historical source table reports first-period impact responses.
+            impact_pct(j) = irf_matrix(1, column_index) * 100;
         end
 
         q_tag = sprintf('q%02d', round(10 * q_values(model_index)));
@@ -161,8 +191,13 @@ try
         if fid < 0
             error('Could not create %s', irf_file);
         end
-        fprintf(fid, 'period,M_EEPSILONIS,Y_EEPSILONIS,P_EEPSILONIS,PPI_EEPSILONIS\n');
+        fprintf(fid, 'period');
+        for j = 1:numel(response_fields)
+            fprintf(fid, ',%s', response_fields{j});
+        end
+        fprintf(fid, '\n');
         fclose(fid);
+
         dlmwrite(irf_file, [(1:irf_horizon)', irf_matrix], ...
             '-append', 'delimiter', ',', 'precision', '%.12g');
 
@@ -174,29 +209,45 @@ try
             q_values(model_index), impact_pct(1), impact_pct(2), impact_pct(3), impact_pct(4));
         fclose(fid);
 
-        fprintf('PASS: q=%.1f, 20 equations, finite steady state, and four 40-period IRFs.\n', ...
-            q_values(model_index));
+        fprintf(['PASS: q=%.1f, 20 equations, finite steady state, finite decision rules, ' ...
+            'and 20 finite 40-period IRFs.\n'], q_values(model_index));
     end
 
     manifest_file = fullfile(outputs_directory, 'runtime_manifest.txt');
     fid = fopen(manifest_file, 'w');
-    if fid >= 0
-        fprintf(fid, 'MATLAB version: %s\n', version);
-        fprintf(fid, 'MATLAB release: %s\n', version('-release'));
-        if exist('dynare_version', 'file') == 2
-            fprintf(fid, 'Dynare: %s\n', dynare_version());
-        end
-        system_libstdcxx = getenv('SYSTEM_LIBSTDCXX');
-        if ~isempty(system_libstdcxx)
-            fprintf(fid, 'Preloaded system C++ runtime: %s\n', system_libstdcxx);
-        end
-        fprintf(fid, 'Calibrations: q=0.2, 0.4, 0.6, 0.8\n');
-        fprintf(fid, 'IRF horizon: %d periods\n', irf_horizon);
-        fprintf(fid, 'Random seed: 12345 (specified in original model files)\n');
-        fprintf(fid, 'Committed DSGE source files: unchanged\n');
-        fprintf(fid, 'Runtime-only diagnostic compatibility: resid(1); -> resid;\n');
-        fclose(fid);
+    if fid < 0
+        error('Could not create runtime manifest: %s', manifest_file);
     end
+
+    dynare_version_text = getenv('DYNARE_VERSION');
+    if exist('dynare_version', 'file') == 2
+        try
+            dynare_version_text = char(string(dynare_version()));
+        catch
+            % The pinned toolbox version remains recorded if this helper is absent.
+        end
+    end
+
+    fprintf(fid, 'MATLAB version: %s\n', version);
+    fprintf(fid, 'MATLAB release: %s\n', version('-release'));
+    fprintf(fid, 'MATLAB platform: %s\n', computer);
+    fprintf(fid, 'Dynare version: %s\n', dynare_version_text);
+    fprintf(fid, 'Dynare MATLAB toolbox URL: %s\n', getenv('DYNARE_MLTBX_URL'));
+    fprintf(fid, 'Dynare MATLAB toolbox SHA-256: %s\n', getenv('DYNARE_MLTBX_SHA256'));
+    fprintf(fid, 'Git source commit: %s\n', getenv('GITHUB_SHA'));
+    fprintf(fid, 'Runner OS: %s\n', getenv('RUNNER_OS'));
+    fprintf(fid, 'Runner image: %s %s\n', getenv('ImageOS'), getenv('ImageVersion'));
+    fprintf(fid, 'System C++ runtime preloaded: %s\n', getenv('SYSTEM_LIBSTDCXX'));
+    fprintf(fid, 'Calibrations: q=0.2, 0.4, 0.6, 0.8\n');
+    fprintf(fid, 'Endogenous responses exported per calibration: 20\n');
+    fprintf(fid, 'IRF horizon: %d periods\n', irf_horizon);
+    fprintf(fid, 'Simulation periods: 5000\n');
+    fprintf(fid, 'Random seed: 12345 (specified in original model files)\n');
+    fprintf(fid, 'Committed DSGE source files: unchanged and checked by Git blob IDs\n');
+    fprintf(fid, 'Runtime-only diagnostic compatibility: resid(1); -> resid;\n');
+    fprintf(fid, 'Octave: not installed; MATLAB is the only model execution engine\n');
+    fprintf(fid, 'Project Python code: none; no Python command is used by the replication workflow\n');
+    fclose(fid);
 
     cd(original_directory);
 catch model_error

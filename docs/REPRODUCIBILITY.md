@@ -1,108 +1,170 @@
 # Reproducibility
 
-## What the automated check does
+## Scope and execution environment
 
-The GitHub Actions workflow executes the four committed Dynare model files in
-a clean Ubuntu 24.04 environment using MATLAB R2024b and the Ubuntu
-`dynare=6.0-1` package. It does not claim to recreate the original MATLAB
-R2017a / Dynare 4.6.4 environment. All automated model execution and
-numerical output validation are performed in MATLAB R2024b. No Python
-runtime is required.
+The automated workflow runs the four committed Dynare model specifications
+on a GitHub-hosted Ubuntu 24.04 runner using MATLAB R2024b and the official
+Dynare 6.0 MATLAB toolbox (dynare-6.0.mltbx).
 
-The workflow installs the Ubuntu `dynare=6.0-1` package and
-headless plotting tools. The package includes the MATLAB source directory
-and Dynare preprocessor. The workflow adds the packaged MATLAB directory to
-MATLAB R2024b's path and adds Dynare's MATLAB fallback routines under
-`missing/mex`, because the Ubuntu package does not provide a
-MATLAB-compiled MEX directory for this runner.
+The workflow deliberately downloads and installs the Dynare MATLAB toolbox
+rather than installing Ubuntu's dynare package. On Ubuntu 24.04, the
+distribution dynare package depends on GNU Octave. That dependency is not
+needed for this MATLAB project. The workflow checks that no Octave executable
+is installed before and after setup and fails if one is found.
 
-The runner checks that steady-state values and the decision-rule
-matrices are finite. It rejects missing or NaN generalized eigenvalues but
-does not reject infinite generalized eigenvalues by themselves: these can
-arise legitimately in a generalized Schur decomposition when a denominator
-is zero. Dynare's rank-condition check and the finite decision-rule matrices
-are retained as the relevant solution checks.
+All research computation, numerical export, figure generation, and
+validation scripts are MATLAB. The repository contains no Python source or
+bytecode files, and the workflow checks that no Python command is invoked by
+the project scripts or workflow. A GitHub-hosted Ubuntu image may have a
+system Python installation for unrelated operating-system tasks; that is not
+a project dependency and is not used to execute the model.
+
+The .mod files are Dynare's domain-specific model language, not MATLAB
+source. GitHub Linguist does not provide a Dynare classifier. The repository
+therefore excludes .mod files from Linguist's language percentage instead
+of misclassifying them as MATLAB or AMPL. This is a transparent statistics
+choice, not a claim that the .mod syntax is MATLAB.
+
+## Workflow steps
 
 The workflow:
 
-1. Verifies with Git that no committed `.mod` file differs from `main`.
-2. Installs the pinned Ubuntu Dynare package and headless plotting tools.
-3. Records the MATLAB and Dynare versions.
-4. Runs `replication/run_all.m`. The runner creates disposable copies of the
-   four committed `.mod` files in
-   `outputs/replication/runtime_workspace/` and applies the single Dynare 6
-   diagnostic compatibility substitution, `resid(1);` to `resid;`, only to
-   those copies. The committed research source files remain unchanged.
-5. Executes all four scenario-specific calibrations and checks that each model
-   has 20 endogenous variables and 20 equations, finite steady-state values,
-   a nonempty generalized-eigenvalue vector with no NaNs and at least one finite
-   value (valid infinite generalized roots are allowed), finite decision-rule
-   matrices, and all four required 40-period impulse responses.
-6. Exports the four period-by-period IRF tables and first-period impact-response
-   summary.
-7. Runs the separate MATLAB script `replication/validate_outputs.m`. It
-   independently recomputes period-1 impact responses from the exported IRFs,
-   checks them against the runner's summary, and compares them with the
-   historical summary table.
-8. Uploads generated outputs and logs as a GitHub Actions artifact.
+1. Checks each committed .mod file against its preserved Git blob ID in
+   models/SOURCE_BLOBS.sha1. A changed model file fails CI until the source
+   baseline is deliberately updated.
+2. Checks that the repository contains no .py or .pyc files and that no
+   Python command is used in .github/workflows or replication.
+3. Checks that Octave is not installed.
+4. Installs plotting and MATLAB runtime system dependencies.
+5. Sets up MATLAB R2024b.
+6. Downloads the official Dynare 6.0 MATLAB toolbox from
+   https://www.dynare.org/release/matlab-online/dynare-6.0.mltbx, verifies
+   that the package is a readable archive, and records its SHA-256 checksum.
+7. Installs the toolbox into MATLAB and checks the Dynare MATLAB path,
+   processor-count routine, generalized Schur routine, and preprocessor.
+8. Runs replication/run_all.m to execute the four calibrations.
+9. Exports all 20 endogenous responses to the speculative-return shock for
+   periods 1–40 in each calibration.
+10. Runs replication/plot_irfs.m to generate a comprehensive 20-variable
+    figure and a focused four-variable figure for each calibration.
+11. Runs replication/validate_outputs.m to check the generated data, figures,
+    source checksums, runtime manifests, and historical impact responses.
+12. Uploads a 90-day workflow artifact and commits successful outputs to
+    main when the workflow runs on the default branch.
 
-## MATLAB and the Dynare preprocessor runtime
+GitHub Actions dependencies are pinned to immutable commit SHAs in the
+workflow. The workflow records the actual MATLAB version and release, Dynare
+toolbox checksum, Ubuntu runner image, installed system-package versions,
+source commit, and SHA-256 checksums of the four model files.
 
-The GitHub Actions job runs MATLAB R2024b on Ubuntu 24.04. The Ubuntu
-Dynare 6.0-1 preprocessor is linked against a newer GNU C++ runtime than the
-older `libstdc++.so.6` bundled with MATLAB R2024b. The workflow therefore
-locates the system `libstdc++.so.6`, verifies that it provides
-`GLIBCXX_3.4.32`, and sets it as `LD_PRELOAD` from inside MATLAB before
-Dynare is launched. This environment setting is inherited by the Dynare
-preprocessor subprocess; it does not change the model files or MATLAB source.
+## Model-source preservation and compatibility
 
-## Dynare 6 diagnostic compatibility
+The four committed .mod files are preserved byte-for-byte. Their Git blob
+object IDs are recorded in models/SOURCE_BLOBS.sha1; CI verifies the files
+with git hash-object before execution.
 
-The original committed model files use `resid(1);` and remain byte-for-byte unchanged. Dynare 6 no longer supports that legacy numeric option. At runtime, the runner creates disposable copies and substitutes only that diagnostic command with `resid;`, which requests the static-equation residual display without an option. This deliberately avoids relying on `non_zero`, an option introduced in a later Dynare release. The temporary substitution does not alter any behavioral equation, calibration value, shock standard deviation, or simulation setting in the committed research sources.
+The original files use the legacy diagnostic command resid(1);. Dynare 6
+does not support that numeric option. replication/run_all.m therefore
+creates disposable copies under
+outputs/replication/runtime_workspace/ and replaces only resid(1); with
+resid; in those copies. No model equation, calibration value, shock
+standard deviation, or simulation option is changed. The runtime workspace
+is ignored by Git and is not committed.
 
-## Run locally with MATLAB
+## Numerical checks
 
-Install a MATLAB release compatible with Dynare 6.0 and install Dynare 6.0.
-Add the `matlab` subdirectory of the Dynare installation to the MATLAB path,
-then run the following commands from the repository root:
+For each calibration, the runner checks:
 
-```matlab
-addpath('PATH_TO_DYNARE_6_0/matlab');
-run('replication/run_all.m');
-run('replication/validate_outputs.m');
-```
+- 20 endogenous variables, 20 equations, and 2 exogenous shocks;
+- finite steady-state values;
+- a nonempty generalized-eigenvalue vector with no NaN values and at least
+  one finite value (valid infinite generalized roots are not rejected by
+  themselves);
+- finite decision-rule matrices;
+- exactly 20 responses to EEPSILONIS;
+- exactly 40 finite observations for every response; and
+- first-period impact responses for the four historically benchmarked series.
 
-For the historical environment, use MATLAB R2017a with Dynare 4.6.4 and
-execute the original model files directly. The automated MATLAB R2024b /
-Dynare 6.0 workflow is a modern execution check, not a claim of bit-for-bit
-identity with the historical software environment.
+The separate MATLAB validator independently recomputes the four first-period
+impact responses for each calibration from the exported IRFs. It checks the
+runner's summary table and compares the results with
+outputs/tables/historical_irf_summary.csv. The tolerance is 0.02 percentage
+points because the historical reference values are rounded to four decimals.
 
-## Historical benchmark interpretation
+## Limits of historical validation
 
-The research note describes the experiment as a one-percent positive
-speculative-return shock and reports the responses reproduced in
-`outputs/tables/historical_irf_summary.csv`. Comparing those values with the
-regenerated period-by-period IRFs shows that they correspond to the **first
-period (impact) responses**, not the largest absolute responses over the full
-40-period horizon. For example, at q=0.2 the price-level response is 1.1346%
-in period 1 and reaches 1.9171% in period 2. The historical table reports
-1.1345%, which is the period-1 value.
+The historical source table provides impact-response benchmarks for four
+variables and four calibrations. It does not provide an independent historical
+40-period path for every endogenous variable. Consequently:
 
-The MATLAB validator therefore compares period 1 only. It still exports the
-complete 40-period paths so the dynamic response can be inspected separately.
-The tolerance is 0.02 percentage points because the historical table is
-rounded to four decimal places. A failed comparison is reported as a numerical
-discrepancy; it is not automatically evidence of a code defect. Shock
-normalization, variable units, sign convention, model version, and historical
-source calculation must be investigated before changing equations or
-calibration values.
+- all 20 generated responses are checked for completeness and finite values
+  over all 40 periods;
+- the four available historical series are compared with the historical
+  impact values at period 1; and
+- the repository does not claim full 40-period historical path matching.
+
+A failed impact comparison is reported as a numerical discrepancy. It is not
+automatically evidence of a code defect. Shock normalization, variable units,
+sign convention, model version, and historical source calculations must be
+investigated before changing equations or calibration values.
+
+## Figure generation
+
+replication/plot_irfs.m reads the exported CSVs and creates eight PNG files
+under outputs/replication/figures/:
+
+- one 4-by-5 panel containing all 20 endogenous responses for each q; and
+- one 2-by-2 panel containing money/liquidity, output, the price level, and
+  inflation for each q.
+
+The historical figures under outputs/figures/ are retained as reference
+materials and are not overwritten by the generated figures.
+
+## Runtime and dependency limits
+
+The workflow pins the major MATLAB release to R2024b, the Dynare toolbox to
+6.0, and GitHub Actions to immutable commit SHAs. It records the actual
+MATLAB patch/version and installed Ubuntu package versions for each run.
+
+GitHub-hosted ubuntu-24.04 images are maintained by GitHub and can change
+over time. MATLAB setup for a named release can also receive update-level
+changes. The recorded manifests make those changes auditable, but the hosted
+runner is not a bit-for-bit frozen virtual machine. The workflow therefore
+claims a pinned and documented execution stack, not identical machine state
+forever.
+
+## Local reproduction
+
+Use MATLAB R2024b and install the official Dynare 6.0 MATLAB toolbox
+(dynare-6.0.mltbx) through MATLAB's Add-On interface or the MATLAB command
+window. In an interactive MATLAB session, the toolbox can also be installed
+with:
+
+~~~matlab
+matlab.addons.install('dynare-6.0.mltbx')
+~~~
+
+Then run the following from the repository root:
+
+~~~matlab
+run('replication/run_all.m')
+run('replication/plot_irfs.m')
+run('replication/validate_outputs.m')
+~~~
+
+The automated Linux workflow also installs gnuplot-nox, Ghostscript, X13,
+and the required MATLAB runtime libraries. It configures the system C++
+runtime for the Dynare preprocessor before launching MATLAB.
 
 ## What a successful run establishes
 
-A successful run establishes that the four model files execute in the stated
-modern Linux/MATLAB environment, generate finite outputs, and reproduce the
-selected historical impact responses within the stated tolerance.
+A successful run establishes that all four committed model specifications
+execute under the documented MATLAB/Dynare environment, produce 20 finite
+40-period responses per calibration, generate the eight figures, and
+reproduce the 16 available historical impact-response values within the
+stated tolerance.
 
 It does not establish that the economic assumptions or calibration are
-correct, that the model is empirically estimated, or that the modern runtime
-is numerically identical to the historical MATLAB/Dynare environment.
+correct, that the model is empirically estimated, that the full historical
+40-period paths have been matched, or that the modern environment is
+bit-for-bit identical to the historical MATLAB R2017a / Dynare 4.6.4 setup.

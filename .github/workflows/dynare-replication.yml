@@ -1,4 +1,4 @@
-name: Dynare reproducibility
+name: MATLAB and Dynare reproducibility
 
 on:
   push:
@@ -12,25 +12,67 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
+
+env:
+  DYNARE_VERSION: "6.0"
+  DYNARE_MLTBX_URL: https://www.dynare.org/release/matlab-online/dynare-6.0.mltbx
 
 jobs:
   replicate:
-    name: Run four DSGE calibrations in MATLAB
+    name: Run and validate four DSGE calibrations in MATLAB
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # actions/checkout v6
 
-      - name: Verify committed DSGE source files are unchanged
+      - name: Verify model-source integrity and MATLAB-only project code
+        shell: bash
         run: |
-          git fetch origin main --depth=1
-          git diff --exit-code origin/main -- models/*.mod
+          set -euo pipefail
 
-      - name: Install MATLAB runtime dependencies
+          while read -r expected_blob model_file; do
+            case "$expected_blob" in
+              ""|\#*) continue ;;
+            esac
+
+            test -f "$model_file"
+            actual_blob="$(git hash-object "$model_file")"
+            if [ "$actual_blob" != "$expected_blob" ]; then
+              echo "::error::Preserved model source changed: $model_file"
+              echo "Expected Git blob: $expected_blob"
+              echo "Actual Git blob:   $actual_blob"
+              exit 1
+            fi
+            echo "PASS: $model_file matches its preserved source blob."
+          done < models/SOURCE_BLOBS.sha1
+
+          if git ls-files '*.py' '*.pyc' | grep -q .; then
+            echo "::error::Python source or bytecode files are present in the repository."
+            git ls-files '*.py' '*.pyc'
+            exit 1
+          fi
+
+          if grep -R -nE '(^|[[:space:]])python(3)?([[:space:]]|$)' \
+              .github/workflows replication; then
+            echo "::error::A Python command was found in the replication workflow or scripts."
+            exit 1
+          fi
+
+          if command -v octave >/dev/null 2>&1; then
+            echo "::error::Octave is installed; this workflow is intended to execute in MATLAB only."
+            exit 1
+          fi
+
+          echo "PASS: model source integrity verified; no project Python code or Octave runtime."
+
+      - name: Install MATLAB and plotting system dependencies
+        shell: bash
         run: |
+          set -euo pipefail
+
           mirror_ok=0
           for mirror in \
             https://mirrors.edge.kernel.org/ubuntu \
@@ -50,7 +92,7 @@ jobs:
           done
 
           if [ "$mirror_ok" -ne 1 ]; then
-            echo "Unable to update Ubuntu package indexes from the configured mirrors."
+            echo "::error::Unable to update Ubuntu package indexes from the configured mirrors."
             exit 1
           fi
 
@@ -59,44 +101,99 @@ jobs:
             -o Acquire::Retries=3 \
             -o Acquire::http::Timeout=30 \
             -o Acquire::https::Timeout=30 \
+            ghostscript gnuplot-nox x13as locales-all \
             libflac12t64 libgstreamer-plugins-base1.0-0 libmp3lame0 \
             libmpg123-0t64 libopus0 liborc-0.4-0t64 libsndfile1 \
-            libvorbisenc2 locales-all
+            libvorbisenc2
+
+          if command -v octave >/dev/null 2>&1; then
+            echo "::error::An OS dependency unexpectedly installed Octave."
+            exit 1
+          fi
 
       - name: Set up MATLAB R2024b
-        uses: matlab-actions/setup-matlab@v3
+        uses: matlab-actions/setup-matlab@f9e43010f1ae678f7cfa0542fe2a4f60f7d1ad8d # matlab-actions/setup-matlab v3
         with:
           release: R2024b
-          cache: true
+          cache: false
           install-system-dependencies: false
 
-      - name: Install pinned Dynare runtime
+      - name: Download and verify the official Dynare 6.0 MATLAB toolbox
+        shell: bash
         run: |
-          timeout 10m sudo env DEBIAN_FRONTEND=noninteractive apt-get install \
-            --yes --no-install-recommends \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=30 \
-            -o Acquire::https::Timeout=30 \
-            dynare=6.0-1 gnuplot-nox ghostscript
+          set -euo pipefail
 
-          DYNARE_PATH="$(dirname "$(dpkg -L dynare | grep '/matlab/dynare.m$' | head -n 1)")"
-          test -n "$DYNARE_PATH"
-          test -f "$DYNARE_PATH/dynare.m"
-          test -f "$DYNARE_PATH/missing/mex/num_procs/num_procs.m"
-          DYNARE_PREPROCESSOR="$(dpkg -L dynare | grep '/dynare-preprocessor$' | head -n 1)"
-          test -n "$DYNARE_PREPROCESSOR"
-          test -x "$DYNARE_PREPROCESSOR"
-          echo "DYNARE_PATH=$DYNARE_PATH" >> "$GITHUB_ENV"
+          toolbox_path="$RUNNER_TEMP/dynare-6.0.mltbx"
+          curl --fail --location --retry 5 --retry-all-errors \
+            --connect-timeout 20 --max-time 300 \
+            "$DYNARE_MLTBX_URL" \
+            --output "$toolbox_path"
 
-          SYSTEM_LIBSTDCXX="$(ldconfig -p | grep 'libstdc++.so.6' | grep 'x86-64' | awk '{print $NF; exit}')"
-          test -f "$SYSTEM_LIBSTDCXX"
-          strings "$SYSTEM_LIBSTDCXX" | grep -Fxq 'GLIBCXX_3.4.32'
-          echo "SYSTEM_LIBSTDCXX=$SYSTEM_LIBSTDCXX" >> "$GITHUB_ENV"
-          echo "System C++ runtime: $SYSTEM_LIBSTDCXX"
-          dpkg-query -W -f='Dynare ${Version}\n' dynare
+          test -s "$toolbox_path"
+          unzip -tq "$toolbox_path"
 
-      - name: Run and validate all four model calibrations in MATLAB
-        uses: matlab-actions/run-command@v3
+          toolbox_sha256="$(sha256sum "$toolbox_path" | awk '{print $1}')"
+          echo "DYNARE_MLTBX_PATH=$toolbox_path" >> "$GITHUB_ENV"
+          echo "DYNARE_MLTBX_SHA256=$toolbox_sha256" >> "$GITHUB_ENV"
+          echo "Dynare $DYNARE_VERSION MATLAB toolbox SHA-256: $toolbox_sha256"
+
+      - name: Install Dynare into MATLAB without installing Octave
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          timeout 10m matlab -nodisplay -nosplash -nodesktop -r \
+            "try, toolbox_file = getenv('DYNARE_MLTBX_PATH'); addon = matlab.addons.install(toolbox_file, true); disp(addon); exit(0); catch exception, disp(getReport(exception, 'extended')); exit(1); end"
+
+          dynare_matlab_file="$(find "$HOME/MATLAB Add-Ons" -type f -name dynare.m -print -quit)"
+          if [ -z "$dynare_matlab_file" ]; then
+            echo "::error::Dynare toolbox installed, but dynare.m could not be located."
+            find "$HOME/MATLAB Add-Ons" -maxdepth 6 -type f | head -n 100
+            exit 1
+          fi
+
+          dynare_path="$(dirname "$dynare_matlab_file")"
+          test -f "$dynare_path/dynare.m"
+
+          # Dynare's configuration checks this conventional directory even
+          # when the MATLAB fallback routines under missing/mex are used.
+          mkdir -p "$dynare_path/../mex/matlab"
+
+          dynare_preprocessor="$(find "$HOME/MATLAB Add-Ons" -type f \
+            \( -name dynare-preprocessor -o -name dynare_preprocessor \) -print -quit)"
+          if [ -z "$dynare_preprocessor" ]; then
+            echo "::error::Dynare preprocessor executable was not found in the installed toolbox."
+            find "$HOME/MATLAB Add-Ons" -type f -iname '*preprocessor*' -print
+            exit 1
+          fi
+          chmod +x "$dynare_preprocessor"
+          if file "$dynare_preprocessor" | grep -q ELF; then
+            if ldd "$dynare_preprocessor" | grep -q 'not found'; then
+              echo "::error::Dynare preprocessor has unresolved shared-library dependencies."
+              ldd "$dynare_preprocessor"
+              exit 1
+            fi
+          fi
+
+          system_libstdcxx="$(ldconfig -p | grep 'libstdc++.so.6' | grep 'x86-64' | awk '{print $NF; exit}')"
+          test -f "$system_libstdcxx"
+          strings "$system_libstdcxx" | grep -Fxq 'GLIBCXX_3.4.32'
+
+          echo "DYNARE_PATH=$dynare_path" >> "$GITHUB_ENV"
+          echo "DYNARE_PREPROCESSOR=$dynare_preprocessor" >> "$GITHUB_ENV"
+          echo "SYSTEM_LIBSTDCXX=$system_libstdcxx" >> "$GITHUB_ENV"
+          echo "DYNARE_VERSION=$DYNARE_VERSION" >> "$GITHUB_ENV"
+          echo "Dynare MATLAB path: $dynare_path"
+          echo "Dynare preprocessor: $dynare_preprocessor"
+          echo "System C++ runtime: $system_libstdcxx"
+
+          if command -v octave >/dev/null 2>&1; then
+            echo "::error::Octave must not be installed in the MATLAB-only execution environment."
+            exit 1
+          fi
+
+      - name: Run all four model calibrations in MATLAB
+        uses: matlab-actions/run-command@bfa857648f4895aa98a446fe41c85e0788421ed5 # matlab-actions/run-command v3
         with:
           command: >-
             system_libstdcxx = getenv('SYSTEM_LIBSTDCXX');
@@ -104,18 +201,104 @@ jobs:
             setenv('LD_PRELOAD', system_libstdcxx);
             assert(strcmp(version('-release'), '2024b'), 'This workflow requires MATLAB R2024b.');
             dynare_path = getenv('DYNARE_PATH');
-            addpath(dynare_path);
+            assert(isfolder(dynare_path), 'Dynare MATLAB folder was not found.');
+            addpath(genpath(dynare_path));
             addpath(genpath(fullfile(dynare_path, 'missing', 'mex')));
+            assert(exist('dynare', 'file') == 2, 'Dynare is not on the MATLAB path.');
             assert(exist('num_procs', 'file') == 2 || exist('num_procs', 'file') == 3, 'Dynare processor-count routine is unavailable.');
             assert(exist('mjdgges', 'file') == 2 || exist('mjdgges', 'file') == 3, 'Dynare generalized Schur routine is unavailable.');
+            if exist('dynare_version', 'file') == 2
+              actual_dynare_version = string(dynare_version());
+              assert(contains(actual_dynare_version, '6.0'), 'The installed Dynare version is not 6.0.');
+            end
             run('replication/run_all.m');
+
+      - name: Record the exact runner environment and model checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          sha256sum models/speculation_money_creation_q02.mod \
+            models/speculation_money_creation_q04.mod \
+            models/speculation_money_creation_q06.mod \
+            models/speculation_money_creation_q08.mod \
+            > outputs/replication/source_model_sha256.txt
+
+          {
+            echo "Source commit: $GITHUB_SHA"
+            echo "Workflow: $GITHUB_WORKFLOW"
+            echo "Runner OS: $RUNNER_OS"
+            echo "Runner image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+            echo "Operating system: $(. /etc/os-release && printf '%s' "$PRETTY_NAME")"
+            echo "Kernel: $(uname -sr)"
+            echo "Dynare version: $DYNARE_VERSION"
+            echo "Dynare MATLAB toolbox URL: $DYNARE_MLTBX_URL"
+            echo "Dynare MATLAB toolbox SHA-256: $DYNARE_MLTBX_SHA256"
+            echo "Octave executable: absent (checked before and after setup)"
+            echo "Project Python source files: none (checked)"
+            echo "Python commands in project workflow and replication scripts: none (checked)"
+            echo
+            echo "MATLAB runtime manifest:"
+            cat outputs/replication/runtime_manifest.txt
+            echo
+            echo "Installed system package versions:"
+            dpkg-query -W -f='${binary:Package}\t${Version}\n' \
+              ghostscript gnuplot-nox x13as locales-all libstdc++6 \
+              libflac12t64 libgstreamer-plugins-base1.0-0 libmp3lame0 \
+              libmpg123-0t64 libopus0 liborc-0.4-0t64 libsndfile1 \
+              libvorbisenc2 | sort
+          } > outputs/replication/environment_manifest.txt
+
+      - name: Generate all IRF figures and validate numerical outputs in MATLAB
+        uses: matlab-actions/run-command@bfa857648f4895aa98a446fe41c85e0788421ed5 # matlab-actions/run-command v3
+        with:
+          command: >-
+            system_libstdcxx = getenv('SYSTEM_LIBSTDCXX');
+            setenv('LD_PRELOAD', system_libstdcxx);
+            dynare_path = getenv('DYNARE_PATH');
+            addpath(genpath(dynare_path));
+            addpath(genpath(fullfile(dynare_path, 'missing', 'mex')));
+            run('replication/plot_irfs.m');
             run('replication/validate_outputs.m');
 
-      - name: Upload generated results and logs
+      - name: Upload generated results and reproducibility manifests
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # actions/upload-artifact v6
         with:
-          name: dynare-matlab-replication-${{ github.sha }}
+          name: dynare-matlab-replication-${{ github.sha }}-${{ github.run_attempt }}
           path: outputs/replication/
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 90
+
+      - name: Commit validated replication outputs to main
+        if: success() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch origin main --depth=1
+          remote_main="$(git rev-parse origin/main)"
+          if [ "$remote_main" != "$GITHUB_SHA" ]; then
+            echo "::warning::main advanced during this run; results remain available as an artifact and were not committed to a newer source revision."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            outputs/replication/irfs_q*.csv \
+            outputs/replication/irf_impact_summary.csv \
+            outputs/replication/runtime_manifest.txt \
+            outputs/replication/environment_manifest.txt \
+            outputs/replication/source_model_sha256.txt \
+            outputs/replication/validation_report.txt \
+            outputs/replication/figures/*.png
+
+          if git diff --cached --quiet; then
+            echo "Generated replication outputs are unchanged; no commit is necessary."
+            exit 0
+          fi
+
+          git commit -m "chore: refresh validated replication outputs [skip ci]"
+          git push origin HEAD:main

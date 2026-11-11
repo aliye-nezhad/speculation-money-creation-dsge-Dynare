@@ -1,1 +1,3 @@
-*.mod linguist-language=Dynare
+# Dynare .mod files are a domain-specific model language, not MATLAB source.
+# GitHub Linguist has no Dynare classifier; exclude them rather than mislabel them.
+*.mod linguist-detectable=false

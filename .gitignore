@@ -1,4 +1,4 @@
-# Dynare-generated working files
+# Dynare-generated temporary files
 *.m~
 *.asv
 *.log
@@ -22,15 +22,6 @@ models/speculation_money_creation_q*_IRF_*.*
 Thumbs.db
 *~
 
-# Generated replication validation outputs
+# Disposable Dynare execution copies only.
+# Validated CSV, TXT, and PNG outputs under outputs/replication are committed.
 outputs/replication/runtime_workspace/
-outputs/replication/irfs_q*.csv
-outputs/replication/irf_impact_summary.csv
-outputs/replication/runtime_manifest.txt
-outputs/replication/validation_report.txt
-
-# Generated replication validation outputs
-outputs/replication/irfs_q*.csv
-outputs/replication/irf_impact_summary.csv
-outputs/replication/runtime_manifest.txt
-outputs/replication/validation_report.txt
