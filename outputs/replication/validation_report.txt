@@ -1,0 +1,20 @@
+q=0.2 M_EEPSILONIS: period-1 impact=2.0733%, historical=2.0733%, difference=0.0000 pp
+q=0.2 Y_EEPSILONIS: period-1 impact=-0.1346%, historical=-0.1345%, difference=0.0001 pp
+q=0.2 P_EEPSILONIS: period-1 impact=1.1346%, historical=1.1345%, difference=0.0001 pp
+q=0.2 PPI_EEPSILONIS: period-1 impact=1.1346%, historical=1.1345%, difference=0.0001 pp
+q=0.4 M_EEPSILONIS: period-1 impact=2.0733%, historical=2.0733%, difference=0.0000 pp
+q=0.4 Y_EEPSILONIS: period-1 impact=-0.1346%, historical=-0.1345%, difference=0.0001 pp
+q=0.4 P_EEPSILONIS: period-1 impact=1.1346%, historical=1.1345%, difference=0.0001 pp
+q=0.4 PPI_EEPSILONIS: period-1 impact=1.1346%, historical=1.1345%, difference=0.0001 pp
+q=0.6 M_EEPSILONIS: period-1 impact=2.0733%, historical=2.0733%, difference=0.0000 pp
+q=0.6 Y_EEPSILONIS: period-1 impact=-0.1346%, historical=-0.1345%, difference=0.0001 pp
+q=0.6 P_EEPSILONIS: period-1 impact=1.1346%, historical=1.1345%, difference=0.0001 pp
+q=0.6 PPI_EEPSILONIS: period-1 impact=1.1346%, historical=1.1345%, difference=0.0001 pp
+q=0.8 M_EEPSILONIS: period-1 impact=2.0625%, historical=2.0625%, difference=0.0000 pp
+q=0.8 Y_EEPSILONIS: period-1 impact=-0.1842%, historical=-0.1841%, difference=0.0001 pp
+q=0.8 P_EEPSILONIS: period-1 impact=1.5526%, historical=1.5525%, difference=0.0001 pp
+q=0.8 PPI_EEPSILONIS: period-1 impact=1.5526%, historical=1.5525%, difference=0.0001 pp
+PASS: validated 80 endogenous IRF series across four calibrations and 40 periods each.
+PASS: 16 historical impact-response comparisons within 0.02 percentage points.
+PASS: 8 generated MATLAB PNG figures exist and pass image-dimension checks.
+LIMITATION: historical source data provide impact benchmarks, not full 40-period reference paths.

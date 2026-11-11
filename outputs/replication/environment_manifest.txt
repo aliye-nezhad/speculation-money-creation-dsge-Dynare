@@ -1,0 +1,48 @@
+Source commit: 7f063ed77a4433d1d3a35d1756d959c86783f1f2
+Workflow: MATLAB and Dynare reproducibility
+Runner OS: Linux
+Runner image: ubuntu24 20261101.360.1
+Operating system: Ubuntu 24.04.5 LTS
+Kernel: Linux 7.0.0-1017-azure
+Dynare version: 6.0
+Dynare MATLAB toolbox URL: https://www.dynare.org/release/matlab-online/dynare-6.0.mltbx
+Dynare MATLAB toolbox SHA-256: 2b09418d141ba3fd077cf2cb97f3aa478a4adf60db11f1ff3f9ec5840da6903f
+Octave executable: absent (checked before and after setup)
+Project Python source files: none (checked)
+Python commands in project workflow and replication scripts: none (checked)
+
+MATLAB runtime manifest:
+MATLAB version: 24.2.0.3361896 (R2024b) Update 10
+MATLAB release: 2024b
+MATLAB platform: GLNXA64
+Dynare version: 6.0
+Dynare MATLAB toolbox URL: https://www.dynare.org/release/matlab-online/dynare-6.0.mltbx
+Dynare MATLAB toolbox SHA-256: 2b09418d141ba3fd077cf2cb97f3aa478a4adf60db11f1ff3f9ec5840da6903f
+Git source commit: 7f063ed77a4433d1d3a35d1756d959c86783f1f2
+Runner OS: Linux
+Runner image: ubuntu24 20261101.360.1
+System C++ runtime preloaded: /lib/x86_64-linux-gnu/libstdc++.so.6
+Calibrations: q=0.2, 0.4, 0.6, 0.8
+Endogenous responses exported per calibration: 20
+IRF horizon: 40 periods
+Simulation periods: 5000
+Random seed: 12345 (specified in original model files)
+Committed DSGE source files: unchanged and checked by Git blob IDs
+Runtime-only diagnostic compatibility: resid(1); -> resid;
+Octave: not installed; MATLAB is the only model execution engine
+Project Python code: none; no Python command is used by the replication workflow
+
+Installed system package versions:
+ghostscript	10.02.1~dfsg1-0ubuntu7.10
+gnuplot-nox	6.0.0+dfsg1-1ubuntu3
+libflac12t64:amd64	1.4.3+ds-2.1ubuntu2
+libgstreamer-plugins-base1.0-0:amd64	1.24.2-1ubuntu0.6
+libmp3lame0:amd64	3.100-6build1
+libmpg123-0t64:amd64	1.32.5-1ubuntu1.1
+libopus0:amd64	1.4-1build1
+liborc-0.4-0t64:amd64	1:0.4.38-1ubuntu0.1
+libsndfile1:amd64	1.2.2-1ubuntu5.24.04.1
+libstdc++6:amd64	14.2.0-4ubuntu2~24.04.1
+libvorbisenc2:amd64	1.3.7-1build3
+locales-all	2.39-0ubuntu8.9
+x13as	1.1-b60-1
