@@ -8,13 +8,13 @@ a clean Ubuntu 24.04 environment using MATLAB R2024b and the Ubuntu
 R2017a / Dynare 4.6.4 environment. All automated model execution is
 performed in MATLAB R2024b.
 
-The workflow installs both Ubuntu packages pinned to the same release:
-
-- `dynare=6.0-1`, which supplies the Dynare runtime and preprocessor;
-- `dynare-matlab=6.0-1`, which supplies the MATLAB interface.
-
-The MATLAB interface is located from the installed package file list rather
-than assuming that it shares a directory layout with the preprocessor.
+The workflow installs the Ubuntu `dynare=6.0-1` runtime and
+headless plotting tools. It downloads the matching `dynare-matlab=6.0-1`
+package and extracts its MATLAB interface files without running Ubuntu's
+`matlab-support` registration hook. That hook expects a system-registered
+MATLAB installation, whereas the MathWorks GitHub Action installs MATLAB in
+the runner tool cache. The extracted interface directory is added to the
+MATLAB path; model execution itself takes place in MATLAB R2024b.
 
 The workflow:
 
