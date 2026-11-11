@@ -41,6 +41,11 @@ jobs:
           DYNARE_PATH="$(dpkg -L dynare | grep '/matlab$' | head -n 1)"
           test -n "$DYNARE_PATH"
           echo "DYNARE_PATH=$DYNARE_PATH" >> "$GITHUB_ENV"
+
+          SYSTEM_LIBSTDCXX="$(ldconfig -p | grep 'libstdc++.so.6' | grep 'x86-64' | awk '{print $NF; exit}')"
+          test -f "$SYSTEM_LIBSTDCXX"
+          strings "$SYSTEM_LIBSTDCXX" | grep -Fxq 'GLIBCXX_3.4.32'
+          echo "SYSTEM_LIBSTDCXX=$SYSTEM_LIBSTDCXX" >> "$GITHUB_ENV"
           dpkg-query -W -f='Dynare ${Version}\n' dynare
 
       - name: Set up Python for independent output validation
@@ -51,7 +56,7 @@ jobs:
       - name: Run all four model calibrations in MATLAB
         uses: matlab-actions/run-command@v3
         with:
-          command: addpath(getenv('DYNARE_PATH')); fprintf('MATLAB %s\\n', version); run('replication/run_all.m');
+          command: setenv('LD_PRELOAD', getenv('SYSTEM_LIBSTDCXX')); addpath(getenv('DYNARE_PATH')); fprintf('MATLAB release: %s', version('-release')); run('replication/run_all.m');
 
       - name: Validate generated impulse responses
         run: python replication/validate_outputs.py
