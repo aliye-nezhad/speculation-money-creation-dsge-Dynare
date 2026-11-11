@@ -1,6 +1,6 @@
 % Run all four historical loan-allocation calibrations and export IRFs.
 % The committed DSGE model files are never edited by this runner.
-% Dynare 6 compatibility is applied only to disposable runtime copies.
+% Dynare 6 compatibility is applied only to disposable runtime copies in MATLAB.
 
 script_path = mfilename('fullpath');
 repository_root = fileparts(fileparts(script_path));
