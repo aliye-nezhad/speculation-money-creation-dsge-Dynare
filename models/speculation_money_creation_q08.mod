@@ -8,8 +8,9 @@
 
   This repository version preserves the original model equations,
   scenario-specific calibration, shock standard deviations, and simulation
-  length. Edits are limited to comments, formatting, explicit simulation
-  defaults, a fixed random seed, and portable file organization.
+  length. Edits are limited to comments, formatting, Dynare 6-compatible
+  diagnostic syntax, explicit simulation defaults, a fixed random seed, and
+  portable file organization.
 =============================================================================*/
 
 /*=============================================================================
@@ -301,7 +302,7 @@ end;
 /*=============================================================================
   8. MODEL DIAGNOSTICS
 =============================================================================*/
-resid(1);
+resid;
 steady;
 check;
 /*=============================================================================
