@@ -16,9 +16,9 @@ permissions:
 
 jobs:
   replicate:
-    name: Run four DSGE calibrations
+    name: Run four DSGE calibrations in MATLAB
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Check out repository
@@ -29,32 +29,99 @@ jobs:
           git fetch origin main --depth=1
           git diff --exit-code origin/main -- models/*.mod
 
+      - name: Install MATLAB runtime dependencies
+        run: |
+          mirror_ok=0
+          for mirror in \
+            https://mirrors.edge.kernel.org/ubuntu \
+            https://ftp.lysator.liu.se/ubuntu \
+            https://mirror.ossplanet.net/ubuntu; do
+            printf '%s\n' "$mirror" | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+            if timeout 3m sudo env DEBIAN_FRONTEND=noninteractive apt-get update \
+              -o APT::Update::Error-Mode=any \
+              -o Acquire::Retries=1 \
+              -o Acquire::http::Timeout=20 \
+              -o Acquire::https::Timeout=20; then
+              echo "Using Ubuntu package mirror: $mirror"
+              mirror_ok=1
+              break
+            fi
+            echo "Mirror unavailable; trying the next Ubuntu mirror."
+          done
+
+          if [ "$mirror_ok" -ne 1 ]; then
+            echo "Unable to update Ubuntu package indexes from the configured mirrors."
+            exit 1
+          fi
+
+          timeout 10m sudo env DEBIAN_FRONTEND=noninteractive apt-get install \
+            --yes --no-install-recommends \
+            -o Acquire::Retries=3 \
+            -o Acquire::http::Timeout=30 \
+            -o Acquire::https::Timeout=30 \
+            libflac12t64 libgstreamer-plugins-base1.0-0 libmp3lame0 \
+            libmpg123-0t64 libopus0 liborc-0.4-0t64 libsndfile1 \
+            libvorbisenc2 locales-all
+
+      - name: Set up MATLAB R2024b
+        uses: matlab-actions/setup-matlab@v3
+        with:
+          release: R2024b
+          cache: true
+          install-system-dependencies: false
+
       - name: Install pinned Dynare runtime
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes dynare=6.0-1 gnuplot-nox ghostscript
+          timeout 10m sudo env DEBIAN_FRONTEND=noninteractive apt-get install \
+            --yes --no-install-recommends \
+            -o Acquire::Retries=3 \
+            -o Acquire::http::Timeout=30 \
+            -o Acquire::https::Timeout=30 \
+            dynare=6.0-1 gnuplot-nox ghostscript
 
-      - name: Locate Dynare and record runtime
-        run: |
-          DYNARE_PATH="$(dpkg -L dynare | grep '/matlab$' | head -n 1)"
+          DYNARE_PATH="$(dirname "$(dpkg -L dynare | grep '/matlab/dynare.m$' | head -n 1)")"
           test -n "$DYNARE_PATH"
+          test -f "$DYNARE_PATH/dynare.m"
+          test -f "$DYNARE_PATH/missing/mex/num_procs/num_procs.m"
+          DYNARE_PREPROCESSOR="$(dpkg -L dynare | grep '/dynare-preprocessor$' | head -n 1)"
+          test -n "$DYNARE_PREPROCESSOR"
+          test -x "$DYNARE_PREPROCESSOR"
           echo "DYNARE_PATH=$DYNARE_PATH" >> "$GITHUB_ENV"
-          octave-cli --quiet --eval "fprintf('GNU Octave %s\\n', version);"
-          dpkg-query -W -f='Dynare ${Version}\\n' dynare
 
-      - name: Run all four model calibrations
-        run: |
-          octave-cli --no-gui --quiet --eval "addpath(getenv('DYNARE_PATH')); graphics_toolkit('gnuplot'); set(0, 'defaultfigurevisible', 'off'); run('replication/run_all.m');"
+          SYSTEM_LIBSTDCXX="$(ldconfig -p | grep 'libstdc++.so.6' | grep 'x86-64' | awk '{print $NF; exit}')"
+          test -f "$SYSTEM_LIBSTDCXX"
+          strings "$SYSTEM_LIBSTDCXX" | grep -Fxq 'GLIBCXX_3.4.32'
+          echo "SYSTEM_LIBSTDCXX=$SYSTEM_LIBSTDCXX" >> "$GITHUB_ENV"
+          echo "System C++ runtime: $SYSTEM_LIBSTDCXX"
+          dpkg-query -W -f='Dynare ${Version}\n' dynare
+      - name: Set up Python for independent output validation
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run all four model calibrations in MATLAB
+        uses: matlab-actions/run-command@v3
+        with:
+          command: >-
+            system_libstdcxx = getenv('SYSTEM_LIBSTDCXX');
+            assert(isfile(system_libstdcxx), 'System C++ runtime was not found.');
+            setenv('LD_PRELOAD', system_libstdcxx);
+            assert(strcmp(version('-release'), '2024b'), 'This workflow requires MATLAB R2024b.');
+            dynare_path = getenv('DYNARE_PATH');
+            addpath(dynare_path);
+            addpath(genpath(fullfile(dynare_path, 'missing', 'mex')));
+            assert(exist('num_procs', 'file') == 2 || exist('num_procs', 'file') == 3, 'Dynare processor-count routine is unavailable.');
+            assert(exist('mjdgges', 'file') == 2 || exist('mjdgges', 'file') == 3, 'Dynare generalized Schur routine is unavailable.');
+            run('replication/run_all.m');
 
       - name: Validate generated impulse responses
-        run: python3 replication/validate_outputs.py
+        run: python replication/validate_outputs.py
 
       - name: Upload generated results and logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dynare-replication-${{ github.sha }}
-          path: |
-            outputs/replication/
+          name: dynare-matlab-replication-${{ github.sha }}
+          path: outputs/replication/
           if-no-files-found: warn
           retention-days: 30

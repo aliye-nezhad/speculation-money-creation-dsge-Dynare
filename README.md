@@ -90,12 +90,13 @@ speculation-money-creation-dsge-dynare/
 ## Automated Reproducibility
 
 The repository includes a GitHub Actions workflow that runs all four
-calibrations in a clean Ubuntu 24.04 / GNU Octave / Dynare 6.0-1 environment.
-It checks model dimensions, finite steady-state and decision-rule outputs,
-40-period impulse responses, and first-period impact responses against the historical
-summary table. The committed DSGE model files remain unchanged; Dynare 6
-compatibility is isolated to disposable runtime copies. This is a modern compatibility test, not an exact recreation
-of the original MATLAB R2017a / Dynare 4.6.4 environment.
+calibrations in a clean Ubuntu 24.04 / MATLAB R2024b / Dynare 6.0-1
+environment. It checks model dimensions, finite steady-state and
+decision-rule outputs, 40-period impulse responses, and first-period impact
+responses against the historical summary table. The committed DSGE model
+files remain unchanged; Dynare 6 compatibility is isolated to disposable
+runtime copies. This is a modern MATLAB execution check, not an exact
+recreation of the original MATLAB R2017a / Dynare 4.6.4 environment.
 
 See [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for the environment,
 validation rules, and local instructions. Generated numerical outputs and logs
@@ -108,15 +109,15 @@ The model was historically run with:
 - Dynare 4.6.4;
 - MATLAB R2017a.
 
-The automated compatibility workflow also executes the models under GNU
-Octave 8.4.0 and Dynare 6.0 on Ubuntu 24.04. This is a modern compatibility
-test, not an exact recreation of the historical MATLAB/Dynare environment.
+The automated workflow executes the models under MATLAB R2024b and Dynare
+6.0-1 on Ubuntu 24.04. Dynare 6 compatibility is applied only to disposable
+runtime copies; the committed model files retain their original syntax.
 Consult the current [Dynare documentation](https://www.dynare.org/manual/)
 for installation and version-specific guidance.
 
 ## Reproduction
 
-Add Dynare to the MATLAB or Octave path, open the repository root, and run:
+Add the Dynare MATLAB directory to the MATLAB path, open the repository root, and run:
 
 ```matlab
 run('replication/run_all.m')

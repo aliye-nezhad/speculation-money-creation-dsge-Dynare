@@ -3,15 +3,30 @@
 ## What the automated check does
 
 The GitHub Actions workflow executes the four committed Dynare model files in
-a clean Ubuntu 24.04 environment using the Ubuntu `dynare=6.0-1` package and
-GNU Octave. It does not claim to recreate the original MATLAB R2017a / Dynare
-4.6.4 environment.
+a clean Ubuntu 24.04 environment using MATLAB R2024b and the Ubuntu
+`dynare=6.0-1` package. It does not claim to recreate the original MATLAB
+R2017a / Dynare 4.6.4 environment. All automated model execution is
+performed in MATLAB R2024b.
+
+The workflow installs the Ubuntu `dynare=6.0-1` package and
+headless plotting tools. The package includes the MATLAB source directory
+and Dynare preprocessor. The workflow adds the packaged MATLAB directory to
+MATLAB R2024b's path and adds Dynare's MATLAB fallback routines under `missing/mex`, because
+the Ubuntu package does not provide a MATLAB-compiled MEX directory for
+this runner. All model execution takes place in MATLAB R2024b.
+
+The runner checks that steady-state values and the decision-rule
+matrices are finite. It rejects missing or NaN generalized eigenvalues but
+does not reject infinite generalized eigenvalues by themselves: these can
+arise legitimately in a generalized Schur decomposition when a denominator
+is zero. Dynare's rank-condition check and the finite decision-rule matrices
+are retained as the relevant solution checks.
 
 The workflow:
 
 1. Verifies with Git that no committed `.mod` file differs from `main`.
 2. Installs the pinned Ubuntu Dynare package and headless plotting tools.
-3. Records the Octave and Dynare versions.
+3. Records the MATLAB and Dynare versions.
 4. Runs `replication/run_all.m`. The runner creates disposable copies of the
    four committed `.mod` files in
    `outputs/replication/runtime_workspace/` and applies the single Dynare 6
@@ -27,19 +42,41 @@ The workflow:
    and compares them with the historical summary table.
 8. Uploads generated outputs and logs as a GitHub Actions artifact.
 
+## MATLAB and the Dynare preprocessor runtime
+
+The GitHub Actions job runs MATLAB R2024b on Ubuntu 24.04. The Ubuntu
+Dynare 6.0-1 preprocessor is linked against a newer GNU C++ runtime than the
+older `libstdc++.so.6` bundled with MATLAB R2024b. The workflow therefore
+locates the system `libstdc++.so.6`, verifies that it provides
+`GLIBCXX_3.4.32`, and sets it as `LD_PRELOAD` from inside MATLAB before
+Dynare is launched. This environment setting is inherited by the Dynare
+preprocessor subprocess; it does not change the model files or MATLAB source.
+
 ## Dynare 6 diagnostic compatibility
 
 The original committed model files use `resid(1);` and remain byte-for-byte unchanged. Dynare 6 no longer supports that legacy numeric option. At runtime, the runner creates disposable copies and substitutes only that diagnostic command with `resid;`, which requests the static-equation residual display without an option. This deliberately avoids relying on `non_zero`, an option introduced in a later Dynare release. The temporary substitution does not alter any behavioral equation, calibration value, shock standard deviation, or simulation setting in the committed research sources.
 
-## Run locally on Ubuntu 24.04
+## Run locally with MATLAB
+
+Install a MATLAB release compatible with Dynare 6.0 and install Dynare 6.0.
+Add the `matlab` subdirectory of the Dynare installation to the MATLAB path,
+then run the following from the repository root:
+
+```matlab
+addpath('PATH_TO_DYNARE_6_0/matlab');
+run('replication/run_all.m');
+```
+
+After the MATLAB run completes, validate the exported files with Python:
 
 ```bash
-sudo apt-get update
-sudo apt-get install --yes dynare=6.0-1 gnuplot-nox ghostscript
-DYNARE_PATH="$(dpkg -L dynare | grep '/matlab$' | head -n 1)"
-octave-cli --no-gui --quiet --eval "addpath('$DYNARE_PATH'); graphics_toolkit('gnuplot'); set(0, 'defaultfigurevisible', 'off'); run('replication/run_all.m');"
-python3 replication/validate_outputs.py
+python replication/validate_outputs.py
 ```
+
+For the historical environment, use MATLAB R2017a with Dynare 4.6.4 and
+execute the original model files directly. The automated MATLAB R2024b /
+Dynare 6.0 workflow is a modern execution check, not a claim of bit-for-bit
+identity with the historical software environment.
 
 ## Historical benchmark interpretation
 
@@ -64,7 +101,7 @@ calibration values.
 ## What a successful run establishes
 
 A successful run establishes that the four model files execute in the stated
-modern Linux/Octave environment, generate finite outputs, and reproduce the
+modern Linux/MATLAB environment, generate finite outputs, and reproduce the
 selected historical impact responses within the stated tolerance.
 
 It does not establish that the economic assumptions or calibration are

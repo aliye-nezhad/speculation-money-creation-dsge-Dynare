@@ -1,6 +1,6 @@
 % Run all four historical loan-allocation calibrations and export IRFs.
 % The committed DSGE model files are never edited by this runner.
-% Dynare 6 compatibility is applied only to disposable runtime copies.
+% Dynare 6 compatibility is applied only to disposable runtime copies in MATLAB.
 
 script_path = mfilename('fullpath');
 repository_root = fileparts(fileparts(script_path));
@@ -11,6 +11,16 @@ original_directory = pwd;
 
 if exist(outputs_directory, 'dir') ~= 7
     mkdir(outputs_directory);
+end
+
+% Remove status files from earlier executions so a failed run cannot leave
+% an old success manifest or validation report looking current.
+stale_status_files = {'runtime_manifest.txt', 'validation_report.txt'};
+for k = 1:numel(stale_status_files)
+    stale_path = fullfile(outputs_directory, stale_status_files{k});
+    if exist(stale_path, 'file') == 2
+        delete(stale_path);
+    end
 end
 
 % Recreate the disposable runtime workspace to prevent stale model output.
@@ -109,8 +119,16 @@ try
             error('%s: steady-state output is missing or non-finite.', model_file);
         end
         if ~isfield(oo_, 'dr') || ~isfield(oo_.dr, 'eigval') || ...
-                isempty(oo_.dr.eigval) || any(~isfinite(oo_.dr.eigval(:)))
-            error('%s: decision-rule eigenvalues are missing or non-finite.', model_file);
+                isempty(oo_.dr.eigval) || any(isnan(oo_.dr.eigval(:))) || ...
+                ~any(isfinite(oo_.dr.eigval(:)))
+            error('%s: decision-rule eigenvalues are missing or contain NaN values.', model_file);
+        end
+        % Infinite generalized eigenvalues can be valid when the denominator
+        % of the generalized Schur pair is zero. Check the solved decision
+        % rule itself for finite values instead of rejecting those roots.
+        if ~isfield(oo_.dr, 'ghx') || ~isfield(oo_.dr, 'ghu') || ...
+                any(~isfinite(oo_.dr.ghx(:))) || any(~isfinite(oo_.dr.ghu(:)))
+            error('%s: decision-rule matrices are missing or non-finite.', model_file);
         end
         if ~isfield(oo_, 'irfs')
             error('%s: Dynare did not produce impulse responses.', model_file);
@@ -163,9 +181,14 @@ try
     manifest_file = fullfile(outputs_directory, 'runtime_manifest.txt');
     fid = fopen(manifest_file, 'w');
     if fid >= 0
-        fprintf(fid, 'Runtime: %s\n', version);
+        fprintf(fid, 'MATLAB version: %s\n', version);
+        fprintf(fid, 'MATLAB release: %s\n', version('-release'));
         if exist('dynare_version', 'file') == 2
             fprintf(fid, 'Dynare: %s\n', dynare_version());
+        end
+        system_libstdcxx = getenv('SYSTEM_LIBSTDCXX');
+        if ~isempty(system_libstdcxx)
+            fprintf(fid, 'Preloaded system C++ runtime: %s\n', system_libstdcxx);
         end
         fprintf(fid, 'Calibrations: q=0.2, 0.4, 0.6, 0.8\n');
         fprintf(fid, 'IRF horizon: %d periods\n', irf_horizon);
