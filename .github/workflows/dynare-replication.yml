@@ -51,8 +51,5 @@ jobs:
           name: dynare-replication-${{ github.sha }}
           path: |
             outputs/replication/
-            models/*.log
-            models/*_results.mat
-            models/*_IRF_*.eps
           if-no-files-found: warn
           retention-days: 30

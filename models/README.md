@@ -67,13 +67,11 @@ run('replication/run_all.m')
 
 ## Minor Repository Edits
 
-The repository files make only presentation and reproducibility changes:
+The committed DSGE model files are preserved byte-for-byte from the original repository. Runtime compatibility changes are applied only to disposable copies created by `replication/run_all.m`.
 
-- comments and formatting were standardized;
-- scenario-specific filenames were introduced;
-- `predetermined_variables M K;` uses the documented Dynare declaration form;
-- the simulation order and IRF horizon are stated explicitly; and
-- a fixed Dynare random seed was added for reproducible simulated moments.
+- The runner copies each original `.mod` file into `outputs/replication/runtime_workspace/`.
+- In each disposable copy only, the Dynare 6-incompatible diagnostic `resid(1);` is replaced with `resid;`.
+- The four committed `.mod` files are not modified by the runner.
 
-No behavioral equation, calibration value, or shock standard deviation was
-changed.
+No behavioral equation, calibration value, shock standard deviation, or
+simulation setting is changed by the compatibility step.

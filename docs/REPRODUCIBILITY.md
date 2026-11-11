@@ -15,15 +15,19 @@ The workflow:
 4. Checks that each model has 20 endogenous variables and 20 equations,
    finite steady-state values, finite decision-rule eigenvalues, and all four
    required 40-period impulse responses.
-5. Exports the four period-by-period IRF tables and signed peak-response
+5. Creates disposable copies of the four committed `.mod` files in
+   `outputs/replication/runtime_workspace/`. The only compatibility
+   substitution is `resid(1);` to `resid;` in those temporary copies. The
+   committed research source files remain unchanged.
+6. Exports the four period-by-period IRF tables and first-period impact-response
    summary.
-6. Independently recomputes the period-1 impact responses from the exported IRFs and
+7. Independently recomputes the period-1 impact responses from the exported IRFs and
    compares them with the historical summary table.
-7. Uploads generated outputs and logs as a GitHub Actions artifact.
+8. Uploads generated outputs and logs as a GitHub Actions artifact.
 
 ## Dynare 6 diagnostic compatibility
 
-The four model files originally used `resid(1);`. Dynare 6 no longer supports that legacy numeric option. The files now use `resid;`, which requests the static-equation residual display without an option. This deliberately avoids relying on `non_zero`, an option introduced in a later Dynare release. This is a diagnostic-command compatibility change only: it does not alter any behavioral equation, calibration value, shock standard deviation, or simulation setting.
+The original committed model files use `resid(1);` and remain byte-for-byte unchanged. Dynare 6 no longer supports that legacy numeric option. At runtime, the runner creates disposable copies and substitutes only that diagnostic command with `resid;`, which requests the static-equation residual display without an option. This deliberately avoids relying on `non_zero`, an option introduced in a later Dynare release. The temporary substitution does not alter any behavioral equation, calibration value, shock standard deviation, or simulation setting in the committed research sources.
 
 ## Run locally on Ubuntu 24.04
 
