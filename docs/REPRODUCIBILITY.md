@@ -34,8 +34,9 @@ The workflow:
    those copies. The committed research source files remain unchanged.
 5. Executes all four scenario-specific calibrations and checks that each model
    has 20 endogenous variables and 20 equations, finite steady-state values,
-   finite decision-rule eigenvalues, and all four required 40-period impulse
-   responses.
+   a nonempty generalized-eigenvalue vector with no NaNs and at least one finite
+   value (valid infinite generalized roots are allowed), finite decision-rule
+   matrices, and all four required 40-period impulse responses.
 6. Exports the four period-by-period IRF tables and first-period impact-response
    summary.
 7. Independently recomputes the period-1 impact responses from the exported IRFs
