@@ -28,6 +28,16 @@ The workflow:
    and compares them with the historical summary table.
 8. Uploads generated outputs and logs as a GitHub Actions artifact.
 
+## MATLAB and the Dynare preprocessor runtime
+
+The GitHub Actions job runs MATLAB R2023b on Ubuntu 24.04. The Ubuntu
+Dynare 6.0-1 preprocessor is linked against a newer GNU C++ runtime than the
+older `libstdc++.so.6` bundled with MATLAB R2023b. The workflow therefore
+locates the system `libstdc++.so.6`, verifies that it provides
+`GLIBCXX_3.4.32`, and sets it as `LD_PRELOAD` from inside MATLAB before
+Dynare is launched. This environment setting is inherited by the Dynare
+preprocessor subprocess; it does not change the model files or MATLAB source.
+
 ## Dynare 6 diagnostic compatibility
 
 The original committed model files use `resid(1);` and remain byte-for-byte unchanged. Dynare 6 no longer supports that legacy numeric option. At runtime, the runner creates disposable copies and substitutes only that diagnostic command with `resid;`, which requests the static-equation residual display without an option. This deliberately avoids relying on `non_zero`, an option introduced in a later Dynare release. The temporary substitution does not alter any behavioral equation, calibration value, shock standard deviation, or simulation setting in the committed research sources.
