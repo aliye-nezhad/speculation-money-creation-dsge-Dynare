@@ -109,8 +109,9 @@ jobs:
             assert(strcmp(version('-release'), '2024b'), 'This workflow requires MATLAB R2024b.');
             dynare_path = getenv('DYNARE_PATH');
             addpath(dynare_path);
-            addpath(fullfile(dynare_path, 'missing', 'mex', 'num_procs'));
+            addpath(genpath(fullfile(dynare_path, 'missing', 'mex')));
             assert(exist('num_procs', 'file') == 2 || exist('num_procs', 'file') == 3, 'Dynare processor-count routine is unavailable.');
+            assert(exist('mjdgges', 'file') == 2 || exist('mjdgges', 'file') == 3, 'Dynare generalized Schur routine is unavailable.');
             run('replication/run_all.m');
 
       - name: Validate generated impulse responses
