@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: dynare-reproducibility-\${{ github.event.pull_request.number || github.ref }}
+  group: dynare-reproducibility-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -93,7 +93,7 @@ jobs:
           strings "$SYSTEM_LIBSTDCXX" | grep -Fxq 'GLIBCXX_3.4.32'
           echo "SYSTEM_LIBSTDCXX=$SYSTEM_LIBSTDCXX" >> "$GITHUB_ENV"
           echo "System C++ runtime: $SYSTEM_LIBSTDCXX"
-          dpkg-query -W -f='Dynare \${Version}\n' dynare
+          dpkg-query -W -f='Dynare ${Version}\n' dynare
 
       - name: Run and validate all four model calibrations in MATLAB
         uses: matlab-actions/run-command@v3
@@ -115,7 +115,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dynare-matlab-replication-\${{ github.sha }}
+          name: dynare-matlab-replication-${{ github.sha }}
           path: outputs/replication/
           if-no-files-found: warn
           retention-days: 30
