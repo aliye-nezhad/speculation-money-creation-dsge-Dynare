@@ -2,7 +2,7 @@ name: Dynare reproducibility
 
 on:
   push:
-    branches: [main, matlab-only-reproducibility]
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -33,6 +33,7 @@ jobs:
         uses: matlab-actions/setup-matlab@v3
         with:
           release: R2023b
+          cache: true
 
       - name: Install pinned Dynare runtime
         run: |
@@ -41,7 +42,7 @@ jobs:
             -o Acquire::http::Timeout=30 \
             -o Acquire::https::Timeout=30
           timeout 10m sudo env DEBIAN_FRONTEND=noninteractive apt-get install \
-            --yes --no-install-recommends dynare=6.0-1 gnuplot-nox ghostscript
+            --yes --no-install-recommends dynare=6.0-1 dynare-matlab=6.0-1 gnuplot-nox ghostscript
 
           DYNARE_PATH="$(dpkg -L dynare | grep '/matlab$' | head -n 1)"
           test -n "$DYNARE_PATH"
@@ -55,6 +56,7 @@ jobs:
           echo "SYSTEM_LIBSTDCXX=$SYSTEM_LIBSTDCXX" >> "$GITHUB_ENV"
           echo "System C++ runtime: $SYSTEM_LIBSTDCXX"
           dpkg-query -W -f='Dynare ${Version}\n' dynare
+          dpkg-query -W -f='Dynare MATLAB support ${Version}\n' dynare-matlab
 
       - name: Set up Python for independent output validation
         uses: actions/setup-python@v5
