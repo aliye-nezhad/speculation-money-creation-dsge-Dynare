@@ -13,6 +13,16 @@ if exist(outputs_directory, 'dir') ~= 7
     mkdir(outputs_directory);
 end
 
+% Remove status files from earlier executions so a failed run cannot leave
+% an old success manifest or validation report looking current.
+stale_status_files = {'runtime_manifest.txt', 'validation_report.txt'};
+for k = 1:numel(stale_status_files)
+    stale_path = fullfile(outputs_directory, stale_status_files{k});
+    if exist(stale_path, 'file') == 2
+        delete(stale_path);
+    end
+end
+
 % Recreate the disposable runtime workspace to prevent stale model output.
 if exist(runtime_directory, 'dir') == 7
     rmdir(runtime_directory, 's');
@@ -42,13 +52,13 @@ manifest_fid = fopen(source_manifest, 'w');
 if manifest_fid < 0
     error('Could not create %s', source_manifest);
 end
-fprintf(manifest_fid, 'Disposable Dynare runtime copies\n');
-fprintf(manifest_fid, '=================================\n');
-fprintf(manifest_fid, 'Original committed files in models/ are not modified.\n');
-fprintf(manifest_fid, 'For Dynare 6 parser compatibility only, each runtime copy replaces\n');
-fprintf(manifest_fid, 'the diagnostic command resid(1); with resid;.\n');
-fprintf(manifest_fid, 'No model equation, calibration, shock specification, or simulation\n');
-fprintf(manifest_fid, 'setting is changed by this compatibility step.\n');
+fprintf(manifest_fid, 'Disposable Dynare runtime copies\\n');
+fprintf(manifest_fid, '=================================\\n');
+fprintf(manifest_fid, 'Original committed files in models/ are not modified.\\n');
+fprintf(manifest_fid, 'For Dynare 6 parser compatibility only, each runtime copy replaces\\n');
+fprintf(manifest_fid, 'the diagnostic command resid(1); with resid;.\\n');
+fprintf(manifest_fid, 'No model equation, calibration, shock specification, or simulation\\n');
+fprintf(manifest_fid, 'setting is changed by this compatibility step.\\n');
 fclose(manifest_fid);
 
 for model_index = 1:numel(model_files)
@@ -82,7 +92,7 @@ summary_fid = fopen(summary_file, 'w');
 if summary_fid < 0
     error('Could not create %s', summary_file);
 end
-fprintf(summary_fid, 'q,impact_M_pct,impact_Y_pct,impact_P_pct,impact_PPI_pct\n');
+fprintf(summary_fid, 'q,impact_M_pct,impact_Y_pct,impact_P_pct,impact_PPI_pct\\n');
 fclose(summary_fid);
 
 % Delete prior IRFs so failed runs cannot leave stale files that look current.
@@ -96,7 +106,7 @@ try
 
     for model_index = 1:numel(model_files)
         model_file = model_files{model_index};
-        fprintf('\n===== Running runtime copy of %s =====\n', model_file);
+        fprintf('\\n===== Running runtime copy of %s =====\\n', model_file);
 
         % noclearall preserves this runner's loop variables between Dynare calls.
         dynare(model_file, 'noclearall');
@@ -143,7 +153,7 @@ try
         if fid < 0
             error('Could not create %s', irf_file);
         end
-        fprintf(fid, 'period,M_EEPSILONIS,Y_EEPSILONIS,P_EEPSILONIS,PPI_EEPSILONIS\n');
+        fprintf(fid, 'period,M_EEPSILONIS,Y_EEPSILONIS,P_EEPSILONIS,PPI_EEPSILONIS\\n');
         fclose(fid);
         dlmwrite(irf_file, [(1:irf_horizon)', irf_matrix], ...
             '-append', 'delimiter', ',', 'precision', '%.12g');
@@ -152,26 +162,31 @@ try
         if fid < 0
             error('Could not append %s', summary_file);
         end
-        fprintf(fid, '%.1f,%.10f,%.10f,%.10f,%.10f\n', ...
+        fprintf(fid, '%.1f,%.10f,%.10f,%.10f,%.10f\\n', ...
             q_values(model_index), impact_pct(1), impact_pct(2), impact_pct(3), impact_pct(4));
         fclose(fid);
 
-        fprintf('PASS: q=%.1f, 20 equations, finite steady state, and four 40-period IRFs.\n', ...
+        fprintf('PASS: q=%.1f, 20 equations, finite steady state, and four 40-period IRFs.\\n', ...
             q_values(model_index));
     end
 
     manifest_file = fullfile(outputs_directory, 'runtime_manifest.txt');
     fid = fopen(manifest_file, 'w');
     if fid >= 0
-        fprintf(fid, 'Runtime: %s\n', version);
+        fprintf(fid, 'MATLAB version: %s\\n', version);
+        fprintf(fid, 'MATLAB release: %s\\n', version('-release'));
         if exist('dynare_version', 'file') == 2
-            fprintf(fid, 'Dynare: %s\n', dynare_version());
+            fprintf(fid, 'Dynare: %s\\n', dynare_version());
         end
-        fprintf(fid, 'Calibrations: q=0.2, 0.4, 0.6, 0.8\n');
-        fprintf(fid, 'IRF horizon: %d periods\n', irf_horizon);
-        fprintf(fid, 'Random seed: 12345 (specified in original model files)\n');
-        fprintf(fid, 'Committed DSGE source files: unchanged\n');
-        fprintf(fid, 'Runtime-only diagnostic compatibility: resid(1); -> resid;\n');
+        system_libstdcxx = getenv('SYSTEM_LIBSTDCXX');
+        if ~isempty(system_libstdcxx)
+            fprintf(fid, 'Preloaded system C++ runtime: %s\\n', system_libstdcxx);
+        end
+        fprintf(fid, 'Calibrations: q=0.2, 0.4, 0.6, 0.8\\n');
+        fprintf(fid, 'IRF horizon: %d periods\\n', irf_horizon);
+        fprintf(fid, 'Random seed: 12345 (specified in original model files)\\n');
+        fprintf(fid, 'Committed DSGE source files: unchanged\\n');
+        fprintf(fid, 'Runtime-only diagnostic compatibility: resid(1); -> resid;\\n');
         fclose(fid);
     end
 
@@ -181,4 +196,4 @@ catch model_error
     rethrow(model_error);
 end
 
-fprintf('\nSUCCESS: all four model calibrations completed.\n');
+fprintf('\\nSUCCESS: all four model calibrations completed.\\n');
