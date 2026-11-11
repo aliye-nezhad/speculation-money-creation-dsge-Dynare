@@ -71,7 +71,7 @@ speculation-money-creation-dsge-dynare/
 │   └── speculation_money_creation_q08.mod
 ├── replication/
 │   ├── run_all.m
-│   └── validate_outputs.py
+│   └── validate_outputs.m
 ├── docs/
 │   ├── REPRODUCIBILITY.md
 │   └── speculation_money_creation_research_note.pdf
@@ -91,16 +91,20 @@ speculation-money-creation-dsge-dynare/
 
 The repository includes a GitHub Actions workflow that runs all four
 calibrations in a clean Ubuntu 24.04 / MATLAB R2024b / Dynare 6.0-1
-environment. It checks model dimensions, finite steady-state values and decision-rule
-matrices, nonempty generalized-eigenvalue output with no NaNs and at least one
-finite value (valid infinite generalized roots are allowed), 40-period impulse
-responses, and first-period impact responses against the historical summary
-table. The committed DSGE model
-files remain unchanged; Dynare 6 compatibility is isolated to disposable
-runtime copies. This is a modern MATLAB execution check, not an exact
-recreation of the original MATLAB R2017a / Dynare 4.6.4 environment.
+environment. It checks model dimensions, finite steady-state values and
+decision-rule matrices, nonempty generalized-eigenvalue output with no NaNs
+and at least one finite value (valid infinite generalized roots are allowed),
+40-period impulse responses, and first-period impact responses against the
+historical summary table. The committed DSGE model files remain unchanged;
+Dynare 6 compatibility is isolated to disposable runtime copies.
 
-See [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for the environment,
+Both model execution and numerical output validation run in MATLAB. The
+separate MATLAB validation script independently recomputes the impact
+responses from the exported impulse-response tables and compares them with
+the historical summary. No Python runtime is required by the replication
+workflow.
+
+See [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) for the environment,
 validation rules, and local instructions. Generated numerical outputs and logs
 are retained as GitHub Actions artifacts.
 
@@ -119,10 +123,13 @@ for installation and version-specific guidance.
 
 ## Reproduction
 
-Add the Dynare MATLAB directory to the MATLAB path, open the repository root, and run:
+Install a MATLAB release compatible with Dynare 6.0 and install Dynare 6.0.
+Add the Dynare MATLAB directory to the MATLAB path, open the repository root,
+and run:
 
 ```matlab
 run('replication/run_all.m')
+run('replication/validate_outputs.m')
 ```
 
 To run one original model file directly, use the historical Dynare 4.6.4
@@ -132,7 +139,9 @@ diagnostic syntax and are not rewritten for Dynare 6.
 For Dynare 6, use `replication/run_all.m`. It creates disposable execution
 copies, applies the diagnostic-only compatibility substitution to those
 copies, and runs all four calibrations without modifying the committed model
-files.
+files. The separate `replication/validate_outputs.m` script then checks the
+exported 40-period impulse responses against the historical impact-response
+table.
 
 Dynare-generated working files are excluded by `.gitignore`. The committed
 figures are historical outputs recovered from the original project materials;
@@ -182,6 +191,7 @@ available. Variable definitions are listed in
 - monetary and banking-sector modeling;
 - steady-state calibration and sensitivity analysis;
 - Dynare diagnostics and stochastic simulation;
+- MATLAB-based replication and numerical validation;
 - impulse-response interpretation; and
 - transparent documentation of model limitations.
 

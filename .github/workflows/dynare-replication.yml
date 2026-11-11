@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: dynare-reproducibility-${{ github.event.pull_request.number || github.ref }}
+  group: dynare-reproducibility-\${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -93,13 +93,9 @@ jobs:
           strings "$SYSTEM_LIBSTDCXX" | grep -Fxq 'GLIBCXX_3.4.32'
           echo "SYSTEM_LIBSTDCXX=$SYSTEM_LIBSTDCXX" >> "$GITHUB_ENV"
           echo "System C++ runtime: $SYSTEM_LIBSTDCXX"
-          dpkg-query -W -f='Dynare ${Version}\n' dynare
-      - name: Set up Python for independent output validation
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+          dpkg-query -W -f='Dynare \${Version}\n' dynare
 
-      - name: Run all four model calibrations in MATLAB
+      - name: Run and validate all four model calibrations in MATLAB
         uses: matlab-actions/run-command@v3
         with:
           command: >-
@@ -113,15 +109,13 @@ jobs:
             assert(exist('num_procs', 'file') == 2 || exist('num_procs', 'file') == 3, 'Dynare processor-count routine is unavailable.');
             assert(exist('mjdgges', 'file') == 2 || exist('mjdgges', 'file') == 3, 'Dynare generalized Schur routine is unavailable.');
             run('replication/run_all.m');
-
-      - name: Validate generated impulse responses
-        run: python replication/validate_outputs.py
+            run('replication/validate_outputs.m');
 
       - name: Upload generated results and logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dynare-matlab-replication-${{ github.sha }}
+          name: dynare-matlab-replication-\${{ github.sha }}
           path: outputs/replication/
           if-no-files-found: warn
           retention-days: 30

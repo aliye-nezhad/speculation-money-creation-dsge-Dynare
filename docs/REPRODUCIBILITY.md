@@ -5,15 +5,16 @@
 The GitHub Actions workflow executes the four committed Dynare model files in
 a clean Ubuntu 24.04 environment using MATLAB R2024b and the Ubuntu
 `dynare=6.0-1` package. It does not claim to recreate the original MATLAB
-R2017a / Dynare 4.6.4 environment. All automated model execution is
-performed in MATLAB R2024b.
+R2017a / Dynare 4.6.4 environment. All automated model execution and
+numerical output validation are performed in MATLAB R2024b. No Python
+runtime is required.
 
 The workflow installs the Ubuntu `dynare=6.0-1` package and
 headless plotting tools. The package includes the MATLAB source directory
 and Dynare preprocessor. The workflow adds the packaged MATLAB directory to
-MATLAB R2024b's path and adds Dynare's MATLAB fallback routines under `missing/mex`, because
-the Ubuntu package does not provide a MATLAB-compiled MEX directory for
-this runner. All model execution takes place in MATLAB R2024b.
+MATLAB R2024b's path and adds Dynare's MATLAB fallback routines under
+`missing/mex`, because the Ubuntu package does not provide a
+MATLAB-compiled MEX directory for this runner.
 
 The runner checks that steady-state values and the decision-rule
 matrices are finite. It rejects missing or NaN generalized eigenvalues but
@@ -39,8 +40,10 @@ The workflow:
    matrices, and all four required 40-period impulse responses.
 6. Exports the four period-by-period IRF tables and first-period impact-response
    summary.
-7. Independently recomputes the period-1 impact responses from the exported IRFs
-   and compares them with the historical summary table.
+7. Runs the separate MATLAB script `replication/validate_outputs.m`. It
+   independently recomputes period-1 impact responses from the exported IRFs,
+   checks them against the runner's summary, and compares them with the
+   historical summary table.
 8. Uploads generated outputs and logs as a GitHub Actions artifact.
 
 ## MATLAB and the Dynare preprocessor runtime
@@ -61,17 +64,12 @@ The original committed model files use `resid(1);` and remain byte-for-byte unch
 
 Install a MATLAB release compatible with Dynare 6.0 and install Dynare 6.0.
 Add the `matlab` subdirectory of the Dynare installation to the MATLAB path,
-then run the following from the repository root:
+then run the following commands from the repository root:
 
 ```matlab
 addpath('PATH_TO_DYNARE_6_0/matlab');
 run('replication/run_all.m');
-```
-
-After the MATLAB run completes, validate the exported files with Python:
-
-```bash
-python replication/validate_outputs.py
+run('replication/validate_outputs.m');
 ```
 
 For the historical environment, use MATLAB R2017a with Dynare 4.6.4 and
@@ -90,10 +88,10 @@ period (impact) responses**, not the largest absolute responses over the full
 in period 1 and reaches 1.9171% in period 2. The historical table reports
 1.1345%, which is the period-1 value.
 
-The validator therefore compares period 1 only. It still exports the complete
-40-period paths so the dynamic response can be inspected separately. The
-tolerance is 0.02 percentage points because the historical table is rounded
-to four decimal places. A failed comparison is reported as a numerical
+The MATLAB validator therefore compares period 1 only. It still exports the
+complete 40-period paths so the dynamic response can be inspected separately.
+The tolerance is 0.02 percentage points because the historical table is
+rounded to four decimal places. A failed comparison is reported as a numerical
 discrepancy; it is not automatically evidence of a code defect. Shock
 normalization, variable units, sign convention, model version, and historical
 source calculation must be investigated before changing equations or
