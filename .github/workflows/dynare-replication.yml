@@ -111,6 +111,12 @@ jobs:
             exit 1
           fi
 
+          system_libstdcxx="$(ldconfig -p | grep 'libstdc++.so.6' | grep 'x86-64' | awk '{print $NF; exit}')"
+          test -f "$system_libstdcxx"
+          strings "$system_libstdcxx" | grep -Fxq 'GLIBCXX_3.4.32'
+          echo "SYSTEM_LIBSTDCXX=$system_libstdcxx" >> "$GITHUB_ENV"
+          echo "System C++ runtime: $system_libstdcxx"
+
       - name: Set up MATLAB R2024b
         uses: matlab-actions/setup-matlab@f9e43010f1ae678f7cfa0542fe2a4f60f7d1ad8d # matlab-actions/setup-matlab v3
         with:
