@@ -15,6 +15,13 @@ MATLAB R2024b's path and adds Dynare's MATLAB fallback routines under `missing/m
 the Ubuntu package does not provide a MATLAB-compiled MEX directory for
 this runner. All model execution takes place in MATLAB R2024b.
 
+The runner checks that steady-state values and the decision-rule
+matrices are finite. It rejects missing or NaN generalized eigenvalues but
+does not reject infinite generalized eigenvalues by themselves: these can
+arise legitimately in a generalized Schur decomposition when a denominator
+is zero. Dynare's rank-condition check and the finite decision-rule matrices
+are retained as the relevant solution checks.
+
 The workflow:
 
 1. Verifies with Git that no committed `.mod` file differs from `main`.
