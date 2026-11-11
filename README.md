@@ -82,6 +82,19 @@ speculation-money-creation-dsge-dynare/
         └── historical_irf_summary.csv
 ```
 
+## Automated Reproducibility
+
+The repository includes a GitHub Actions workflow that runs all four
+calibrations in a clean Ubuntu 24.04 / GNU Octave / Dynare 6.0-1 environment.
+It checks model dimensions, finite steady-state and decision-rule outputs,
+40-period impulse responses, and signed peak responses against the historical
+summary table. This is a modern compatibility test, not an exact recreation
+of the original MATLAB R2017a / Dynare 4.6.4 environment.
+
+See [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for the environment,
+validation rules, and local instructions. Generated numerical outputs and logs
+are retained as GitHub Actions artifacts.
+
 ## Requirements
 
 The model was historically run with:

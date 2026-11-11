@@ -22,4 +22,8 @@ models/speculation_money_creation_q*_IRF_*.*
 Thumbs.db
 *~
 
-
+# Generated replication validation outputs
+outputs/replication/irfs_q*.csv
+outputs/replication/irf_peak_summary.csv
+outputs/replication/runtime_manifest.txt
+outputs/replication/validation_report.txt
