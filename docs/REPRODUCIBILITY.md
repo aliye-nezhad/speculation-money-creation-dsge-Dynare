@@ -39,7 +39,9 @@ The workflow:
 5. Sets up MATLAB R2024b.
 6. Downloads the official Dynare 6.0 MATLAB toolbox from
    https://www.dynare.org/release/matlab-online/dynare-6.0.mltbx, verifies
-   that the package is a readable archive, and records its SHA-256 checksum.
+   that the package is a readable archive, verifies it against the reviewed
+   SHA-256 checksum `2b09418d141ba3fd077cf2cb97f3aa478a4adf60db11f1ff3f9ec5840da6903f`,
+   and records the checksum in the runtime manifest.
 7. Installs the toolbox into MATLAB, checks the Dynare MATLAB path,
    processor-count routine and generalized Schur routine, and then verifies
    the preprocessor by successfully executing all four model files.
