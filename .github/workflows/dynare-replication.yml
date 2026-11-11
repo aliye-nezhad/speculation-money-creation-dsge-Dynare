@@ -1,0 +1,60 @@
+name: Dynare reproducibility
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: dynare-reproducibility-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  replicate:
+    name: Run four DSGE calibrations
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Verify committed DSGE source files are unchanged
+        run: |
+          git fetch origin main --depth=1
+          git diff --exit-code origin/main -- models/*.mod
+
+      - name: Install pinned Dynare runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes dynare=6.0-1 gnuplot-nox ghostscript
+
+      - name: Locate Dynare and record runtime
+        run: |
+          DYNARE_PATH="$(dpkg -L dynare | grep '/matlab$' | head -n 1)"
+          test -n "$DYNARE_PATH"
+          echo "DYNARE_PATH=$DYNARE_PATH" >> "$GITHUB_ENV"
+          octave-cli --quiet --eval "fprintf('GNU Octave %s\\n', version);"
+          dpkg-query -W -f='Dynare ${Version}\\n' dynare
+
+      - name: Run all four model calibrations
+        run: |
+          octave-cli --no-gui --quiet --eval "addpath(getenv('DYNARE_PATH')); graphics_toolkit('gnuplot'); set(0, 'defaultfigurevisible', 'off'); run('replication/run_all.m');"
+
+      - name: Validate generated impulse responses
+        run: python3 replication/validate_outputs.py
+
+      - name: Upload generated results and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dynare-replication-${{ github.sha }}
+          path: |
+            outputs/replication/
+          if-no-files-found: warn
+          retention-days: 30

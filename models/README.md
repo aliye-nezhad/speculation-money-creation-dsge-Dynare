@@ -51,29 +51,33 @@ otherwise preserved across cases.
 
 ## Running a Model
 
-Start MATLAB or GNU Octave with Dynare available, set the repository root as
-the working directory, and run one case:
+The original `.mod` files retain their historical Dynare 4.6.4 diagnostic
+syntax. To run one original model file directly, use the historical Dynare
+4.6.4 environment:
 
 ```matlab
 cd models
 dynare speculation_money_creation_q02.mod
 ```
 
-Alternatively, run all four cases from the repository root:
+For Dynare 6, run the repository-level runner instead:
 
 ```matlab
 run('replication/run_all.m')
 ```
 
+The runner creates disposable copies under
+`outputs/replication/runtime_workspace/` and applies the diagnostic-only
+compatibility substitution to those copies. It never edits the committed
+model files.
+
 ## Minor Repository Edits
 
-The repository files make only presentation and reproducibility changes:
+The committed DSGE model files are preserved byte-for-byte from the original repository. Runtime compatibility changes are applied only to disposable copies created by `replication/run_all.m`.
 
-- comments and formatting were standardized;
-- scenario-specific filenames were introduced;
-- `predetermined_variables M K;` uses the documented Dynare declaration form;
-- the simulation order and IRF horizon are stated explicitly; and
-- a fixed Dynare random seed was added for reproducible simulated moments.
+- The runner copies each original `.mod` file into `outputs/replication/runtime_workspace/`.
+- In each disposable copy only, the Dynare 6-incompatible diagnostic `resid(1);` is replaced with `resid;`.
+- The four committed `.mod` files are not modified by the runner.
 
-No behavioral equation, calibration value, or shock standard deviation was
-changed.
+No behavioral equation, calibration value, shock standard deviation, or
+simulation setting is changed by the compatibility step.
