@@ -21,12 +21,12 @@ q_values = [0.2, 0.4, 0.6, 0.8];
 irf_names = {'M_EEPSILONIS', 'Y_EEPSILONIS', 'P_EEPSILONIS', 'PPI_EEPSILONIS'};
 irf_horizon = 40;
 
-summary_file = fullfile(outputs_directory, 'irf_peak_summary.csv');
+summary_file = fullfile(outputs_directory, 'irf_impact_summary.csv');
 summary_fid = fopen(summary_file, 'w');
 if summary_fid < 0
     error('Could not create %s', summary_file);
 end
-fprintf(summary_fid, 'q,peak_M_pct,peak_Y_pct,peak_P_pct,peak_PPI_pct\n');
+fprintf(summary_fid, 'q,impact_M_pct,impact_Y_pct,impact_P_pct,impact_PPI_pct\n');
 fclose(summary_fid);
 
 % Delete prior CSVs so failed runs cannot leave stale files that look current.
@@ -61,7 +61,7 @@ try
         end
 
         irf_matrix = zeros(irf_horizon, numel(irf_names));
-        peak_pct = zeros(1, numel(irf_names));
+        impact_pct = zeros(1, numel(irf_names));
 
         for j = 1:numel(irf_names)
             name = irf_names{j};
@@ -77,9 +77,8 @@ try
             end
 
             irf_matrix(:, j) = response;
-            [~, peak_index] = max(abs(response));
-            % Preserve the sign of the largest absolute response.
-            peak_pct(j) = response(peak_index) * 100;
+            % Historical source figures are first-period impact responses.
+            impact_pct(j) = response(1) * 100;
         end
 
         q_tag = sprintf('q%02d', round(10 * q_values(model_index)));
@@ -98,7 +97,7 @@ try
             error('Could not append %s', summary_file);
         end
         fprintf(fid, '%.1f,%.10f,%.10f,%.10f,%.10f\n', ...
-            q_values(model_index), peak_pct(1), peak_pct(2), peak_pct(3), peak_pct(4));
+            q_values(model_index), impact_pct(1), impact_pct(2), impact_pct(3), impact_pct(4));
         fclose(fid);
 
         fprintf('PASS: q=%.1f, 20 equations, finite steady state, and four 40-period IRFs.\n', ...

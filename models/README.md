@@ -72,7 +72,6 @@ The repository files make only presentation and reproducibility changes:
 - comments and formatting were standardized;
 - scenario-specific filenames were introduced;
 - `predetermined_variables M K;` uses the documented Dynare declaration form;
-- the legacy `resid(1);` diagnostic was replaced with the Dynare 6-compatible `resid;` command; this displays the static-equation residuals without the removed numeric option;
 - the simulation order and IRF horizon are stated explicitly; and
 - a fixed Dynare random seed was added for reproducible simulated moments.
 

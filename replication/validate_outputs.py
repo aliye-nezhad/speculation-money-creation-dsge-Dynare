@@ -19,10 +19,10 @@ HISTORICAL = ROOT / "outputs" / "tables" / "historical_irf_summary.csv"
 TOLERANCE_PP = 0.02
 
 SERIES = (
-    ("M_EEPSILONIS", "peak_M_pct", "money_liquidity_response_pct"),
-    ("Y_EEPSILONIS", "peak_Y_pct", "output_response_pct"),
-    ("P_EEPSILONIS", "peak_P_pct", "price_response_pct"),
-    ("PPI_EEPSILONIS", "peak_PPI_pct", "inflation_response_pct"),
+    ("M_EEPSILONIS", "impact_M_pct", "money_liquidity_response_pct"),
+    ("Y_EEPSILONIS", "impact_Y_pct", "output_response_pct"),
+    ("P_EEPSILONIS", "impact_P_pct", "price_response_pct"),
+    ("PPI_EEPSILONIS", "impact_PPI_pct", "inflation_response_pct"),
 )
 Q_TAGS = {0.2: "q02", 0.4: "q04", 0.6: "q06", 0.8: "q08"}
 
@@ -50,7 +50,7 @@ def main() -> int:
         round(number(row["productive_loan_share"], "historical q"), 1): row
         for row in historical_rows
     }
-    summary_rows = read_rows(GENERATED / "irf_peak_summary.csv")
+    summary_rows = read_rows(GENERATED / "irf_impact_summary.csv")
     summary = {round(number(row["q"], "summary q"), 1): row for row in summary_rows}
 
     expected_q = set(Q_TAGS)
@@ -70,9 +70,8 @@ def main() -> int:
 
         for series_name, summary_name, historical_name in SERIES:
             values = [number(row[series_name], f"{tag} {series_name}") for row in rows]
-            peak_index = max(range(len(values)), key=lambda i: abs(values[i]))
-            recomputed_peak = values[peak_index] * 100.0
-            stored_peak = number(summary[q][summary_name], f"{tag} {summary_name}")
+            recomputed_impact = values[0] * 100.0
+            stored_impact = number(summary[q][summary_name], f"{tag} {summary_name}")
             if abs(recomputed_peak - stored_peak) > 1e-7:
                 raise AssertionError(
                     f"{tag} {summary_name}: runner summary {stored_peak:.8f} "
@@ -87,7 +86,7 @@ def main() -> int:
             )
             if difference > TOLERANCE_PP:
                 raise AssertionError(
-                    f"Peak-response mismatch for q={q:.1f}, {series_name}: "
+                    f"Impact-response mismatch for q={q:.1f}, {series_name}: "
                     f"{recomputed_peak:.4f}% vs {benchmark:.4f}% "
                     f"(tolerance {TOLERANCE_PP:.4f} pp)."
                 )

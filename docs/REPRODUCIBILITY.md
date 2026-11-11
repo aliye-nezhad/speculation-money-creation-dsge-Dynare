@@ -17,7 +17,7 @@ The workflow:
    required 40-period impulse responses.
 5. Exports the four period-by-period IRF tables and signed peak-response
    summary.
-6. Independently recomputes the signed peaks from the exported IRFs and
+6. Independently recomputes the period-1 impact responses from the exported IRFs and
    compares them with the historical summary table.
 7. Uploads generated outputs and logs as a GitHub Actions artifact.
 
@@ -37,24 +37,29 @@ python3 replication/validate_outputs.py
 
 ## Historical benchmark interpretation
 
-The repository README describes the values in
-`outputs/tables/historical_irf_summary.csv` as historical **peak** percentage
-responses. The validator therefore identifies the signed response at the
-largest absolute value over periods 1–40. It does not compare period-1 impact
-responses with these benchmarks.
+The research note describes the experiment as a one-percent positive
+speculative-return shock and reports the responses reproduced in
+`outputs/tables/historical_irf_summary.csv`. Comparing those values with the
+regenerated period-by-period IRFs shows that they correspond to the **first
+period (impact) responses**, not the largest absolute responses over the full
+40-period horizon. For example, at q=0.2 the price-level response is 1.1346%
+in period 1 and reaches 1.9171% in period 2. The historical table reports
+1.1345%, which is the period-1 value.
 
-The tolerance is 0.02 percentage points because the historical table is
-rounded to four decimal places. A failed comparison is reported as a
-numerical discrepancy; it is not automatically evidence of a code defect.
-The shock normalization, variable units, sign convention, model version, and
-historical source calculation must be investigated before changing equations
-or calibration values.
+The validator therefore compares period 1 only. It still exports the complete
+40-period paths so the dynamic response can be inspected separately. The
+tolerance is 0.02 percentage points because the historical table is rounded
+to four decimal places. A failed comparison is reported as a numerical
+discrepancy; it is not automatically evidence of a code defect. Shock
+normalization, variable units, sign convention, model version, and historical
+source calculation must be investigated before changing equations or
+calibration values.
 
 ## What a successful run establishes
 
 A successful run establishes that the four model files execute in the stated
 modern Linux/Octave environment, generate finite outputs, and reproduce the
-selected historical peak responses within the stated tolerance.
+selected historical impact responses within the stated tolerance.
 
 It does not establish that the economic assumptions or calibration are
 correct, that the model is empirically estimated, or that the modern runtime
