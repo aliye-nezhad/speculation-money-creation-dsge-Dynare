@@ -29,10 +29,10 @@ jobs:
           git fetch origin main --depth=1
           git diff --exit-code origin/main -- models/*.mod
 
-      - name: Set up MATLAB R2023b
+      - name: Set up MATLAB R2024b
         uses: matlab-actions/setup-matlab@v3
         with:
-          release: R2023b
+          release: R2024b
           cache: true
 
       - name: Install pinned Dynare runtime
@@ -72,7 +72,7 @@ jobs:
             system_libstdcxx = getenv('SYSTEM_LIBSTDCXX');
             assert(isfile(system_libstdcxx), 'System C++ runtime was not found.');
             setenv('LD_PRELOAD', system_libstdcxx);
-            assert(strcmp(version('-release'), '2023b'), 'This workflow requires MATLAB R2023b.');
+            assert(strcmp(version('-release'), '2024b'), 'This workflow requires MATLAB R2024b.');
             addpath(getenv('DYNARE_PATH'));
             fprintf('MATLAB release: %s\\n', version('-release'));
             fprintf('Preloaded C++ runtime: %s\\n', getenv('LD_PRELOAD'));
@@ -115,7 +115,7 @@ jobs:
             system_libstdcxx = getenv('SYSTEM_LIBSTDCXX');
             assert(isfile(system_libstdcxx), 'System C++ runtime was not found.');
             setenv('LD_PRELOAD', system_libstdcxx);
-            assert(strcmp(version('-release'), '2023b'), 'This workflow requires MATLAB R2023b.');
+            assert(strcmp(version('-release'), '2024b'), 'This workflow requires MATLAB R2024b.');
             addpath(getenv('DYNARE_PATH'));
             fprintf('MATLAB release: %s\\n', version('-release'));
             fprintf('Preloaded C++ runtime: %s\\n', getenv('LD_PRELOAD'));
