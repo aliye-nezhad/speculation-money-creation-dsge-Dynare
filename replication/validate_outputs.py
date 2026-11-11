@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Validate regenerated 40-period Dynare IRFs against historical peak responses.
+"""Validate 40-period Dynare IRFs against historical period-1 impact responses.
 
-The historical README explicitly describes the tabulated values as peak
-responses. This validator independently recomputes each signed peak from the
-period-by-period CSV, checks the runner's summary, then compares it with the
-historical table. Standard library only.
+The historical research note reports the impact response to a one-percent
+speculative-return shock. This validator checks period 1, not the maximum
+absolute response over the full IRF horizon. Standard library only.
 """
 from __future__ import annotations
 
@@ -70,31 +69,31 @@ def main() -> int:
 
         for series_name, summary_name, historical_name in SERIES:
             values = [number(row[series_name], f"{tag} {series_name}") for row in rows]
-            recomputed_impact = values[0] * 100.0
+            impact = values[0] * 100.0
             stored_impact = number(summary[q][summary_name], f"{tag} {summary_name}")
-            if abs(recomputed_peak - stored_peak) > 1e-7:
+            if abs(impact - stored_impact) > 1e-7:
                 raise AssertionError(
-                    f"{tag} {summary_name}: runner summary {stored_peak:.8f} "
-                    f"does not match recomputed peak {recomputed_peak:.8f}."
+                    f"{tag} {summary_name}: runner summary {stored_impact:.8f} "
+                    f"does not match recomputed period-1 impact {impact:.8f}."
                 )
 
             benchmark = number(historical[q][historical_name], f"historical {historical_name}")
-            difference = abs(recomputed_peak - benchmark)
+            difference = abs(impact - benchmark)
             report.append(
-                f"q={q:.1f} {series_name}: regenerated signed peak={recomputed_peak:.4f}%, "
+                f"q={q:.1f} {series_name}: period-1 impact={impact:.4f}%, "
                 f"historical={benchmark:.4f}%, difference={difference:.4f} pp"
             )
             if difference > TOLERANCE_PP:
                 raise AssertionError(
                     f"Impact-response mismatch for q={q:.1f}, {series_name}: "
-                    f"{recomputed_peak:.4f}% vs {benchmark:.4f}% "
+                    f"{impact:.4f}% vs {benchmark:.4f}% "
                     f"(tolerance {TOLERANCE_PP:.4f} pp)."
                 )
 
     report.append(
         f"PASS: four calibrations; four finite 40-period IRFs per case; "
-        f"runner summaries independently checked; historical signed peaks "
-        f"within {TOLERANCE_PP:.2f} percentage points."
+        f"runner summaries independently checked; historical period-1 impact "
+        f"responses within {TOLERANCE_PP:.2f} percentage points."
     )
     output = GENERATED / "validation_report.txt"
     output.write_text("\n".join(report) + "\n", encoding="utf-8")

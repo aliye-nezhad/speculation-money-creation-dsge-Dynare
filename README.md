@@ -87,7 +87,7 @@ speculation-money-creation-dsge-dynare/
 The repository includes a GitHub Actions workflow that runs all four
 calibrations in a clean Ubuntu 24.04 / GNU Octave / Dynare 6.0-1 environment.
 It checks model dimensions, finite steady-state and decision-rule outputs,
-40-period impulse responses, and signed peak responses against the historical
+40-period impulse responses, and first-period impact responses against the historical
 summary table. This is a modern compatibility test, not an exact recreation
 of the original MATLAB R2017a / Dynare 4.6.4 environment.
 
@@ -102,10 +102,11 @@ The model was historically run with:
 - Dynare 4.6.4;
 - MATLAB R2017a.
 
-Dynare also supports GNU Octave, but this repository package was not
-re-executed under Octave or a newer Dynare release. Consult the current
-[Dynare documentation](https://www.dynare.org/manual/) for installation and
-version-specific guidance.
+The automated compatibility workflow also executes the models under GNU
+Octave 8.4.0 and Dynare 6.0 on Ubuntu 24.04. This is a modern compatibility
+test, not an exact recreation of the historical MATLAB/Dynare environment.
+Consult the current [Dynare documentation](https://www.dynare.org/manual/)
+for installation and version-specific guidance.
 
 ## Reproduction
 
@@ -129,7 +130,7 @@ they were not regenerated in this packaging environment.
 ## Historical Results
 
 The research note reports that a positive speculative-return shock increases
-the monetary aggregate and prices while reducing output. The reported peak
+the monetary aggregate and prices while reducing output. The reported first-period impact
 percentage responses are stored in
 [`outputs/tables/historical_irf_summary.csv`](outputs/tables/historical_irf_summary.csv).
 
