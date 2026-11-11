@@ -137,62 +137,7 @@ jobs:
           echo "DYNARE_MLTBX_SHA256=$toolbox_sha256" >> "$GITHUB_ENV"
           echo "Dynare $DYNARE_VERSION MATLAB toolbox SHA-256: $toolbox_sha256"
 
-      - name: Install Dynare into MATLAB without installing Octave
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          timeout 10m matlab -nodisplay -nosplash -nodesktop -r \
-            "try, toolbox_file = getenv('DYNARE_MLTBX_PATH'); addon = matlab.addons.install(toolbox_file, true); disp(addon); exit(0); catch exception, disp(getReport(exception, 'extended')); exit(1); end"
-
-          dynare_matlab_file="$(find "$HOME/MATLAB Add-Ons" -type f -name dynare.m -print -quit)"
-          if [ -z "$dynare_matlab_file" ]; then
-            echo "::error::Dynare toolbox installed, but dynare.m could not be located."
-            find "$HOME/MATLAB Add-Ons" -maxdepth 6 -type f | head -n 100
-            exit 1
-          fi
-
-          dynare_path="$(dirname "$dynare_matlab_file")"
-          test -f "$dynare_path/dynare.m"
-
-          # Dynare's configuration checks this conventional directory even
-          # when the MATLAB fallback routines under missing/mex are used.
-          mkdir -p "$dynare_path/../mex/matlab"
-
-          dynare_preprocessor="$(find "$HOME/MATLAB Add-Ons" -type f \
-            \( -name dynare-preprocessor -o -name dynare_preprocessor \) -print -quit)"
-          if [ -z "$dynare_preprocessor" ]; then
-            echo "::error::Dynare preprocessor executable was not found in the installed toolbox."
-            find "$HOME/MATLAB Add-Ons" -type f -iname '*preprocessor*' -print
-            exit 1
-          fi
-          chmod +x "$dynare_preprocessor"
-          if file "$dynare_preprocessor" | grep -q ELF; then
-            if ldd "$dynare_preprocessor" | grep -q 'not found'; then
-              echo "::error::Dynare preprocessor has unresolved shared-library dependencies."
-              ldd "$dynare_preprocessor"
-              exit 1
-            fi
-          fi
-
-          system_libstdcxx="$(ldconfig -p | grep 'libstdc++.so.6' | grep 'x86-64' | awk '{print $NF; exit}')"
-          test -f "$system_libstdcxx"
-          strings "$system_libstdcxx" | grep -Fxq 'GLIBCXX_3.4.32'
-
-          echo "DYNARE_PATH=$dynare_path" >> "$GITHUB_ENV"
-          echo "DYNARE_PREPROCESSOR=$dynare_preprocessor" >> "$GITHUB_ENV"
-          echo "SYSTEM_LIBSTDCXX=$system_libstdcxx" >> "$GITHUB_ENV"
-          echo "DYNARE_VERSION=$DYNARE_VERSION" >> "$GITHUB_ENV"
-          echo "Dynare MATLAB path: $dynare_path"
-          echo "Dynare preprocessor: $dynare_preprocessor"
-          echo "System C++ runtime: $system_libstdcxx"
-
-          if command -v octave >/dev/null 2>&1; then
-            echo "::error::Octave must not be installed in the MATLAB-only execution environment."
-            exit 1
-          fi
-
-      - name: Run all four model calibrations in MATLAB
+      - name: Install Dynare and execute all replication scripts inside MATLAB
         uses: matlab-actions/run-command@bfa857648f4895aa98a446fe41c85e0788421ed5 # matlab-actions/run-command v3
         with:
           command: >-
@@ -200,8 +145,13 @@ jobs:
             assert(isfile(system_libstdcxx), 'System C++ runtime was not found.');
             setenv('LD_PRELOAD', system_libstdcxx);
             assert(strcmp(version('-release'), '2024b'), 'This workflow requires MATLAB R2024b.');
-            dynare_path = getenv('DYNARE_PATH');
-            assert(isfolder(dynare_path), 'Dynare MATLAB folder was not found.');
+            toolbox_file = getenv('DYNARE_MLTBX_PATH');
+            assert(isfile(toolbox_file), 'Dynare MATLAB toolbox file was not found.');
+            matlab.addons.install(toolbox_file, true);
+            rehash;
+            dynare_file = which('dynare');
+            assert(~isempty(dynare_file), 'Dynare toolbox installed, but dynare.m is not on the MATLAB path.');
+            dynare_path = fileparts(dynare_file);
             addpath(genpath(dynare_path));
             addpath(genpath(fullfile(dynare_path, 'missing', 'mex')));
             assert(exist('dynare', 'file') == 2, 'Dynare is not on the MATLAB path.');
@@ -212,6 +162,8 @@ jobs:
               assert(contains(actual_dynare_version, '6.0'), 'The installed Dynare version is not 6.0.');
             end
             run('replication/run_all.m');
+            run('replication/plot_irfs.m');
+            run('replication/validate_outputs.m');
 
       - name: Record the exact runner environment and model checksums
         shell: bash
@@ -248,18 +200,6 @@ jobs:
               libmpg123-0t64 libopus0 liborc-0.4-0t64 libsndfile1 \
               libvorbisenc2 | sort
           } > outputs/replication/environment_manifest.txt
-
-      - name: Generate all IRF figures and validate numerical outputs in MATLAB
-        uses: matlab-actions/run-command@bfa857648f4895aa98a446fe41c85e0788421ed5 # matlab-actions/run-command v3
-        with:
-          command: >-
-            system_libstdcxx = getenv('SYSTEM_LIBSTDCXX');
-            setenv('LD_PRELOAD', system_libstdcxx);
-            dynare_path = getenv('DYNARE_PATH');
-            addpath(genpath(dynare_path));
-            addpath(genpath(fullfile(dynare_path, 'missing', 'mex')));
-            run('replication/plot_irfs.m');
-            run('replication/validate_outputs.m');
 
       - name: Upload generated results and reproducibility manifests
         if: always()
