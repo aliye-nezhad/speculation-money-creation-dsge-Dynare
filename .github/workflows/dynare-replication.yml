@@ -79,17 +79,10 @@ jobs:
             -o Acquire::https::Timeout=30 \
             dynare=6.0-1 gnuplot-nox ghostscript
 
-          # Extract the MATLAB interface without invoking Ubuntu's
-          # matlab-support registration hook. MATLAB Actions keeps MATLAB
-          # in the runner tool cache rather than a system installation path.
-          cd "$RUNNER_TEMP"
-          apt-get download dynare-matlab=6.0-1
-          mkdir -p "$RUNNER_TEMP/dynare-matlab"
-          dpkg-deb -x dynare-matlab_6.0-1_all.deb "$RUNNER_TEMP/dynare-matlab"
-          DYNARE_PATH="$(dirname "$(find "$RUNNER_TEMP/dynare-matlab" -type f -name dynare.m -print -quit)")"
+          DYNARE_PATH="$(dirname "$(dpkg -L dynare | grep '/matlab/dynare.m$' | head -n 1)")"
           test -n "$DYNARE_PATH"
           test -f "$DYNARE_PATH/dynare.m"
-
+          test -f "$DYNARE_PATH/missing/mex/num_procs/num_procs.m"
           DYNARE_PREPROCESSOR="$(dpkg -L dynare | grep '/dynare-preprocessor$' | head -n 1)"
           test -n "$DYNARE_PREPROCESSOR"
           test -x "$DYNARE_PREPROCESSOR"
@@ -101,7 +94,6 @@ jobs:
           echo "SYSTEM_LIBSTDCXX=$SYSTEM_LIBSTDCXX" >> "$GITHUB_ENV"
           echo "System C++ runtime: $SYSTEM_LIBSTDCXX"
           dpkg-query -W -f='Dynare ${Version}\n' dynare
-
       - name: Set up Python for independent output validation
         uses: actions/setup-python@v5
         with:
@@ -115,7 +107,10 @@ jobs:
             assert(isfile(system_libstdcxx), 'System C++ runtime was not found.');
             setenv('LD_PRELOAD', system_libstdcxx);
             assert(strcmp(version('-release'), '2024b'), 'This workflow requires MATLAB R2024b.');
-            addpath(getenv('DYNARE_PATH'));
+            dynare_path = getenv('DYNARE_PATH');
+            addpath(dynare_path);
+            addpath(fullfile(dynare_path, 'missing', 'mex', 'num_procs'));
+            assert(exist('num_procs', 'file') == 2 || exist('num_procs', 'file') == 3, 'Dynare processor-count routine is unavailable.');
             run('replication/run_all.m');
 
       - name: Validate generated impulse responses
