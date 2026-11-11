@@ -79,10 +79,9 @@ jobs:
             -o Acquire::https::Timeout=30 \
             dynare=6.0-1 gnuplot-nox ghostscript
 
-          # The Ubuntu MATLAB-interface package has a post-install hook that
-          # requires a system-registered MATLAB installation. MATLAB Actions
-          # installs MATLAB in the runner tool cache instead. Extract the
-          # interface files without running that unrelated registration hook.
+          # Extract the MATLAB interface without invoking Ubuntu's
+          # matlab-support registration hook. MATLAB Actions keeps MATLAB
+          # in the runner tool cache rather than a system installation path.
           cd "$RUNNER_TEMP"
           apt-get download dynare-matlab=6.0-1
           mkdir -p "$RUNNER_TEMP/dynare-matlab"
@@ -90,14 +89,18 @@ jobs:
           DYNARE_PATH="$(dirname "$(find "$RUNNER_TEMP/dynare-matlab" -type f -name dynare.m -print -quit)")"
           test -n "$DYNARE_PATH"
           test -f "$DYNARE_PATH/dynare.m"
-          DYNARE_PREPROCESSOR="$(dpkg -L dynare | grep '/dynare-preprocessor
+
+          DYNARE_PREPROCESSOR="$(dpkg -L dynare | grep '/dynare-preprocessor$' | head -n 1)"
+          test -n "$DYNARE_PREPROCESSOR"
+          test -x "$DYNARE_PREPROCESSOR"
+          echo "DYNARE_PATH=$DYNARE_PATH" >> "$GITHUB_ENV"
+
           SYSTEM_LIBSTDCXX="$(ldconfig -p | grep 'libstdc++.so.6' | grep 'x86-64' | awk '{print $NF; exit}')"
           test -f "$SYSTEM_LIBSTDCXX"
           strings "$SYSTEM_LIBSTDCXX" | grep -Fxq 'GLIBCXX_3.4.32'
           echo "SYSTEM_LIBSTDCXX=$SYSTEM_LIBSTDCXX" >> "$GITHUB_ENV"
           echo "System C++ runtime: $SYSTEM_LIBSTDCXX"
-          dpkg-query -W -f='Dynare ${Version}\n' dynare
-          dpkg-query -W -f='Dynare MATLAB support ${Version}\n' dynare-matlab
+          dpkg-query -W -f='Dynare ${Version}\\n' dynare
 
       - name: Set up Python for independent output validation
         uses: actions/setup-python@v5
