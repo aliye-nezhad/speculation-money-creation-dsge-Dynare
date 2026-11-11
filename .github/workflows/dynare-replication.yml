@@ -77,12 +77,58 @@ jobs:
             -o Acquire::Retries=3 \
             -o Acquire::http::Timeout=30 \
             -o Acquire::https::Timeout=30 \
-            dynare=6.0-1 dynare-matlab=6.0-1 gnuplot-nox ghostscript
+            dynare=6.0-1 gnuplot-nox ghostscript
 
-          DYNARE_PATH="$(dirname "$(dpkg -L dynare-matlab | grep '/dynare.m$' | head -n 1)")"
+          # The Ubuntu MATLAB-interface package has a post-install hook that
+          # requires a system-registered MATLAB installation. MATLAB Actions
+          # installs MATLAB in the runner tool cache instead. Extract the
+          # interface files without running that unrelated registration hook.
+          cd "$RUNNER_TEMP"
+          apt-get download dynare-matlab=6.0-1
+          mkdir -p "$RUNNER_TEMP/dynare-matlab"
+          dpkg-deb -x dynare-matlab_6.0-1_all.deb "$RUNNER_TEMP/dynare-matlab"
+          DYNARE_PATH="$(dirname "$(find "$RUNNER_TEMP/dynare-matlab" -type f -name dynare.m -print -quit)")"
           test -n "$DYNARE_PATH"
           test -f "$DYNARE_PATH/dynare.m"
-          DYNARE_PREPROCESSOR="$(dpkg -L dynare | grep '/dynare-preprocessor$' | head -n 1)"
+          DYNARE_PREPROCESSOR="$(dpkg -L dynare | grep '/dynare-preprocessor
+          SYSTEM_LIBSTDCXX="$(ldconfig -p | grep 'libstdc++.so.6' | grep 'x86-64' | awk '{print $NF; exit}')"
+          test -f "$SYSTEM_LIBSTDCXX"
+          strings "$SYSTEM_LIBSTDCXX" | grep -Fxq 'GLIBCXX_3.4.32'
+          echo "SYSTEM_LIBSTDCXX=$SYSTEM_LIBSTDCXX" >> "$GITHUB_ENV"
+          echo "System C++ runtime: $SYSTEM_LIBSTDCXX"
+          dpkg-query -W -f='Dynare ${Version}\n' dynare
+          dpkg-query -W -f='Dynare MATLAB support ${Version}\n' dynare-matlab
+
+      - name: Set up Python for independent output validation
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run all four model calibrations in MATLAB
+        uses: matlab-actions/run-command@v3
+        with:
+          command: >-
+            system_libstdcxx = getenv('SYSTEM_LIBSTDCXX');
+            assert(isfile(system_libstdcxx), 'System C++ runtime was not found.');
+            setenv('LD_PRELOAD', system_libstdcxx);
+            assert(strcmp(version('-release'), '2024b'), 'This workflow requires MATLAB R2024b.');
+            addpath(getenv('DYNARE_PATH'));
+            fprintf('MATLAB release: %s\\n', version('-release'));
+            fprintf('Preloaded C++ runtime: %s\\n', getenv('LD_PRELOAD'));
+            run('replication/run_all.m');
+
+      - name: Validate generated impulse responses
+        run: python replication/validate_outputs.py
+
+      - name: Upload generated results and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dynare-matlab-replication-${{ github.sha }}
+          path: outputs/replication/
+          if-no-files-found: warn
+          retention-days: 30
+ | head -n 1)"
           test -n "$DYNARE_PREPROCESSOR"
           test -x "$DYNARE_PREPROCESSOR"
           echo "DYNARE_PATH=$DYNARE_PATH" >> "$GITHUB_ENV"
