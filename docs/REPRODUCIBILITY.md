@@ -3,10 +3,10 @@
 ## What the automated check does
 
 The GitHub Actions workflow executes the four committed Dynare model files in
-a clean Ubuntu 24.04 environment using MATLAB R2023b and the Ubuntu
+a clean Ubuntu 24.04 environment using MATLAB R2024b and the Ubuntu
 `dynare=6.0-1` package. It does not claim to recreate the original MATLAB
 R2017a / Dynare 4.6.4 environment. All automated model execution is
-performed in MATLAB R2023b.
+performed in MATLAB R2024b.
 
 The workflow installs both Ubuntu packages pinned to the same release:
 
@@ -38,9 +38,9 @@ The workflow:
 
 ## MATLAB and the Dynare preprocessor runtime
 
-The GitHub Actions job runs MATLAB R2023b on Ubuntu 24.04. The Ubuntu
+The GitHub Actions job runs MATLAB R2024b on Ubuntu 24.04. The Ubuntu
 Dynare 6.0-1 preprocessor is linked against a newer GNU C++ runtime than the
-older `libstdc++.so.6` bundled with MATLAB R2023b. The workflow therefore
+older `libstdc++.so.6` bundled with MATLAB R2024b. The workflow therefore
 locates the system `libstdc++.so.6`, verifies that it provides
 `GLIBCXX_3.4.32`, and sets it as `LD_PRELOAD` from inside MATLAB before
 Dynare is launched. This environment setting is inherited by the Dynare
@@ -68,7 +68,7 @@ python replication/validate_outputs.py
 ```
 
 For the historical environment, use MATLAB R2017a with Dynare 4.6.4 and
-execute the original model files directly. The automated MATLAB R2023b /
+execute the original model files directly. The automated MATLAB R2024b /
 Dynare 6.0 workflow is a modern execution check, not a claim of bit-for-bit
 identity with the historical software environment.
 
