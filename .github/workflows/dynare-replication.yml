@@ -16,9 +16,9 @@ permissions:
 
 jobs:
   replicate:
-    name: Run four DSGE calibrations
+    name: Run four DSGE calibrations in MATLAB
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Check out repository
@@ -29,32 +29,38 @@ jobs:
           git fetch origin main --depth=1
           git diff --exit-code origin/main -- models/*.mod
 
+      - name: Set up MATLAB R2023b
+        uses: matlab-actions/setup-matlab@v3
+        with:
+          release: R2023b
+
       - name: Install pinned Dynare runtime
         run: |
           sudo apt-get update
           sudo apt-get install --yes dynare=6.0-1 gnuplot-nox ghostscript
-
-      - name: Locate Dynare and record runtime
-        run: |
           DYNARE_PATH="$(dpkg -L dynare | grep '/matlab$' | head -n 1)"
           test -n "$DYNARE_PATH"
           echo "DYNARE_PATH=$DYNARE_PATH" >> "$GITHUB_ENV"
-          octave-cli --quiet --eval "fprintf('GNU Octave %s\\n', version);"
-          dpkg-query -W -f='Dynare ${Version}\\n' dynare
+          dpkg-query -W -f='Dynare ${Version}\n' dynare
 
-      - name: Run all four model calibrations
-        run: |
-          octave-cli --no-gui --quiet --eval "addpath(getenv('DYNARE_PATH')); graphics_toolkit('gnuplot'); set(0, 'defaultfigurevisible', 'off'); run('replication/run_all.m');"
+      - name: Set up Python for independent output validation
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run all four model calibrations in MATLAB
+        uses: matlab-actions/run-command@v3
+        with:
+          command: addpath(getenv('DYNARE_PATH')); fprintf('MATLAB %s\\n', version); run('replication/run_all.m');
 
       - name: Validate generated impulse responses
-        run: python3 replication/validate_outputs.py
+        run: python replication/validate_outputs.py
 
       - name: Upload generated results and logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dynare-replication-${{ github.sha }}
-          path: |
-            outputs/replication/
+          name: dynare-matlab-replication-${{ github.sha }}
+          path: outputs/replication/
           if-no-files-found: warn
           retention-days: 30
