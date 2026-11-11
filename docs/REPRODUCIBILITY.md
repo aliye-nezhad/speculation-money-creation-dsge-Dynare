@@ -21,6 +21,10 @@ The workflow:
    compares them with the historical summary table.
 7. Uploads generated outputs and logs as a GitHub Actions artifact.
 
+## Dynare 6 diagnostic compatibility
+
+The four model files originally used `resid(1);`. Dynare 6 no longer supports that legacy syntax. Its documented replacement is `resid(non_zero);`, where `non_zero` restricts the diagnostic display to non-zero residuals. The four files now use that option. This is a diagnostic-command compatibility change only: it does not alter any behavioral equation, calibration value, shock standard deviation, or simulation setting.
+
 ## Run locally on Ubuntu 24.04
 
 ```bash
