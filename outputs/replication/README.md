@@ -1,7 +1,7 @@
 # Generated replication outputs
 
 This directory is populated by `replication/run_all.m` and validated by
-`replication/validate_outputs.py`.
+`replication/validate_outputs.m`.
 
 Expected generated files:
 
