@@ -40,8 +40,9 @@ The workflow:
 6. Downloads the official Dynare 6.0 MATLAB toolbox from
    https://www.dynare.org/release/matlab-online/dynare-6.0.mltbx, verifies
    that the package is a readable archive, and records its SHA-256 checksum.
-7. Installs the toolbox into MATLAB and checks the Dynare MATLAB path,
-   processor-count routine, generalized Schur routine, and preprocessor.
+7. Installs the toolbox into MATLAB, checks the Dynare MATLAB path,
+   processor-count routine and generalized Schur routine, and then verifies
+   the preprocessor by successfully executing all four model files.
 8. Runs replication/run_all.m to execute the four calibrations.
 9. Exports all 20 endogenous responses to the speculative-return shock for
    periods 1–40 in each calibration.
@@ -70,6 +71,23 @@ outputs/replication/runtime_workspace/ and replaces only resid(1); with
 resid; in those copies. No model equation, calibration value, shock
 standard deviation, or simulation option is changed. The runtime workspace
 is ignored by Git and is not committed.
+
+## MATLAB toolbox compatibility warnings
+
+The official Dynare 6.0 MATLAB toolbox installs and executes in the CI
+environment, but MATLAB R2024b's Add-On manager emits a warning that the
+toolbox metadata does not mark it as supported for this MATLAB release or
+platform. The same run proceeds to execute Dynare 6.0 successfully for all
+four calibrations, and the independent numerical and figure validators pass.
+This is evidence of successful execution in the tested environment; it is
+not a claim that the Add-On manager's vendor-compatibility warning has been
+formally cleared.
+
+Dynare 6.0 also places legacy helper names on the MATLAB path that overlap
+with newer MATLAB built-ins (notably contains, and a datetime class/function
+name). MATLAB reports path-precedence warnings. They did not prevent the
+models or plotting scripts from completing in the verified run. They are
+recorded as compatibility caveats rather than suppressed or hidden.
 
 ## Numerical checks
 
