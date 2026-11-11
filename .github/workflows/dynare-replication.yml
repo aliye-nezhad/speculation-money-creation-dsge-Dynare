@@ -2,7 +2,7 @@ name: Dynare reproducibility
 
 on:
   push:
-    branches: [main]
+    branches: [main, matlab-only-reproducibility]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -54,7 +54,7 @@ jobs:
           strings "$SYSTEM_LIBSTDCXX" | grep -Fxq 'GLIBCXX_3.4.32'
           echo "SYSTEM_LIBSTDCXX=$SYSTEM_LIBSTDCXX" >> "$GITHUB_ENV"
           echo "System C++ runtime: $SYSTEM_LIBSTDCXX"
-          dpkg-query -W -f='Dynare ${Version}\\n' dynare
+          dpkg-query -W -f='Dynare ${Version}\n' dynare
 
       - name: Set up Python for independent output validation
         uses: actions/setup-python@v5
@@ -64,7 +64,7 @@ jobs:
       - name: Run all four model calibrations in MATLAB
         uses: matlab-actions/run-command@v3
         with:
-          command: system_libstdcxx = getenv('SYSTEM_LIBSTDCXX'); assert(isfile(system_libstdcxx), 'System C++ runtime was not found.'); setenv('LD_PRELOAD', system_libstdcxx); assert(strcmp(version('-release'), '2023b'), 'This workflow requires MATLAB R2023b.'); addpath(getenv('DYNARE_PATH')); fprintf('MATLAB release: %s\\n', version('-release')); fprintf('Preloaded C++ runtime: %s\\n', getenv('LD_PRELOAD')); run('replication/run_all.m');
+          command: system_libstdcxx = getenv('SYSTEM_LIBSTDCXX'); assert(isfile(system_libstdcxx), 'System C++ runtime was not found.'); setenv('LD_PRELOAD', system_libstdcxx); assert(strcmp(version('-release'), '2023b'), 'This workflow requires MATLAB R2023b.'); addpath(getenv('DYNARE_PATH')); fprintf('MATLAB release: %s\n', version('-release')); fprintf('Preloaded C++ runtime: %s\n', getenv('LD_PRELOAD')); run('replication/run_all.m');
 
       - name: Validate generated impulse responses
         run: python replication/validate_outputs.py
