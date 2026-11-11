@@ -60,6 +60,9 @@ speculation-money-creation-dsge-dynare/
 ├── LICENSE
 ├── .gitignore
 ├── .gitattributes
+├── .github/
+│   └── workflows/
+│       └── dynare-replication.yml
 ├── models/
 │   ├── README.md
 │   ├── speculation_money_creation_q02.mod
@@ -67,8 +70,10 @@ speculation-money-creation-dsge-dynare/
 │   ├── speculation_money_creation_q06.mod
 │   └── speculation_money_creation_q08.mod
 ├── replication/
-│   └── run_all.m
+│   ├── run_all.m
+│   └── validate_outputs.py
 ├── docs/
+│   ├── REPRODUCIBILITY.md
 │   └── speculation_money_creation_research_note.pdf
 └── outputs/
     ├── figures/
@@ -117,12 +122,14 @@ Add Dynare to the MATLAB or Octave path, open the repository root, and run:
 run('replication/run_all.m')
 ```
 
-To run one calibration only:
+To run one original model file directly, use the historical Dynare 4.6.4
+environment. The original `.mod` files intentionally retain their legacy
+diagnostic syntax and are not rewritten for Dynare 6.
 
-```matlab
-cd models
-dynare speculation_money_creation_q02.mod
-```
+For Dynare 6, use `replication/run_all.m`. It creates disposable execution
+copies, applies the diagnostic-only compatibility substitution to those
+copies, and runs all four calibrations without modifying the committed model
+files.
 
 Dynare-generated working files are excluded by `.gitignore`. The committed
 figures are historical outputs recovered from the original project materials;

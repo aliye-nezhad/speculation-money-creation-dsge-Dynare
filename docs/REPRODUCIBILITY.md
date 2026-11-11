@@ -12,19 +12,20 @@ The workflow:
 1. Verifies with Git that no committed `.mod` file differs from `main`.
 2. Installs the pinned Ubuntu Dynare package and headless plotting tools.
 3. Records the Octave and Dynare versions.
-4. Runs all four scenario-specific model files using temporary copies.
-5. Checks that each model has 20 endogenous variables and 20 equations,
-   finite steady-state values, finite decision-rule eigenvalues, and all four
-   required 40-period impulse responses.
-6. Creates disposable copies of the four committed `.mod` files in
-   `outputs/replication/runtime_workspace/`. The only compatibility
-   substitution is `resid(1);` to `resid;` in those temporary copies. The
-   committed research source files remain unchanged.
-7. Exports the four period-by-period IRF tables and first-period impact-response
+4. Runs `replication/run_all.m`. The runner creates disposable copies of the
+   four committed `.mod` files in
+   `outputs/replication/runtime_workspace/` and applies the single Dynare 6
+   diagnostic compatibility substitution, `resid(1);` to `resid;`, only to
+   those copies. The committed research source files remain unchanged.
+5. Executes all four scenario-specific calibrations and checks that each model
+   has 20 endogenous variables and 20 equations, finite steady-state values,
+   finite decision-rule eigenvalues, and all four required 40-period impulse
+   responses.
+6. Exports the four period-by-period IRF tables and first-period impact-response
    summary.
-8. Independently recomputes the period-1 impact responses from the exported IRFs and
-   compares them with the historical summary table.
-9. Uploads generated outputs and logs as a GitHub Actions artifact.
+7. Independently recomputes the period-1 impact responses from the exported IRFs
+   and compares them with the historical summary table.
+8. Uploads generated outputs and logs as a GitHub Actions artifact.
 
 ## Dynare 6 diagnostic compatibility
 
