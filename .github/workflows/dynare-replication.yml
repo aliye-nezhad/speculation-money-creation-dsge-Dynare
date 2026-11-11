@@ -146,7 +146,7 @@ jobs:
       - name: Install Dynare and execute all replication scripts inside MATLAB
         uses: matlab-actions/run-command@bfa857648f4895aa98a446fe41c85e0788421ed5 # matlab-actions/run-command v3
         with:
-          command: >-
+          command: |
             system_libstdcxx = getenv('SYSTEM_LIBSTDCXX');
             assert(isfile(system_libstdcxx), 'System C++ runtime was not found.');
             setenv('LD_PRELOAD', system_libstdcxx);
