@@ -1,14 +1,25 @@
 % Run all four historical loan-allocation calibrations and export IRFs.
-% Run from the repository root, or call this script by its full path.
+% The committed DSGE model files are never edited by this runner.
+% Dynare 6 compatibility is applied only to disposable runtime copies.
 
 script_path = mfilename('fullpath');
 repository_root = fileparts(fileparts(script_path));
 models_directory = fullfile(repository_root, 'models');
 outputs_directory = fullfile(repository_root, 'outputs', 'replication');
+runtime_directory = fullfile(outputs_directory, 'runtime_workspace');
 original_directory = pwd;
 
 if exist(outputs_directory, 'dir') ~= 7
     mkdir(outputs_directory);
+end
+
+% Recreate the disposable runtime workspace to prevent stale model output.
+if exist(runtime_directory, 'dir') == 7
+    rmdir(runtime_directory, 's');
+end
+[workspace_created, workspace_message] = mkdir(runtime_directory);
+if ~workspace_created
+    error('Could not create runtime workspace: %s', workspace_message);
 end
 
 model_files = {
@@ -21,6 +32,51 @@ q_values = [0.2, 0.4, 0.6, 0.8];
 irf_names = {'M_EEPSILONIS', 'Y_EEPSILONIS', 'P_EEPSILONIS', 'PPI_EEPSILONIS'};
 irf_horizon = 40;
 
+% Create runtime copies. The sole compatibility edit is to a diagnostic
+% command removed from the Dynare 6 parser. No economic model statement,
+% parameter, shock, or simulation option is edited.
+legacy_diagnostic = 'resid(1);';
+runtime_diagnostic = 'resid;';
+source_manifest = fullfile(runtime_directory, 'RUNTIME_SOURCE_README.txt');
+manifest_fid = fopen(source_manifest, 'w');
+if manifest_fid < 0
+    error('Could not create %s', source_manifest);
+end
+fprintf(manifest_fid, 'Disposable Dynare runtime copies\n');
+fprintf(manifest_fid, '=================================\n');
+fprintf(manifest_fid, 'Original committed files in models/ are not modified.\n');
+fprintf(manifest_fid, 'For Dynare 6 parser compatibility only, each runtime copy replaces\n');
+fprintf(manifest_fid, 'the diagnostic command resid(1); with resid;.\n');
+fprintf(manifest_fid, 'No model equation, calibration, shock specification, or simulation\n');
+fprintf(manifest_fid, 'setting is changed by this compatibility step.\n');
+fclose(manifest_fid);
+
+for model_index = 1:numel(model_files)
+    model_file = model_files{model_index};
+    source_file = fullfile(models_directory, model_file);
+    runtime_file = fullfile(runtime_directory, model_file);
+    source_text = fileread(source_file);
+    diagnostic_positions = strfind(source_text, legacy_diagnostic);
+
+    % Fail closed if the expected legacy diagnostic is absent or ambiguous.
+    if numel(diagnostic_positions) ~= 1
+        error('%s: expected exactly one legacy diagnostic command; found %d.', ...
+            model_file, numel(diagnostic_positions));
+    end
+
+    runtime_text = strrep(source_text, legacy_diagnostic, runtime_diagnostic);
+    if strcmp(runtime_text, source_text)
+        error('%s: runtime compatibility substitution was not applied.', model_file);
+    end
+
+    fid = fopen(runtime_file, 'w');
+    if fid < 0
+        error('Could not create runtime copy %s', runtime_file);
+    end
+    fprintf(fid, '%s', runtime_text);
+    fclose(fid);
+end
+
 summary_file = fullfile(outputs_directory, 'irf_impact_summary.csv');
 summary_fid = fopen(summary_file, 'w');
 if summary_fid < 0
@@ -29,18 +85,18 @@ end
 fprintf(summary_fid, 'q,impact_M_pct,impact_Y_pct,impact_P_pct,impact_PPI_pct\n');
 fclose(summary_fid);
 
-% Delete prior CSVs so failed runs cannot leave stale files that look current.
+% Delete prior IRFs so failed runs cannot leave stale files that look current.
 stale_files = dir(fullfile(outputs_directory, 'irfs_q*.csv'));
 for k = 1:numel(stale_files)
     delete(fullfile(outputs_directory, stale_files(k).name));
 end
 
 try
-    cd(models_directory);
+    cd(runtime_directory);
 
     for model_index = 1:numel(model_files)
         model_file = model_files{model_index};
-        fprintf('\n===== Running %s =====\n', model_file);
+        fprintf('\n===== Running runtime copy of %s =====\n', model_file);
 
         % noclearall preserves this runner's loop variables between Dynare calls.
         dynare(model_file, 'noclearall');
@@ -77,7 +133,7 @@ try
             end
 
             irf_matrix(:, j) = response;
-            % Historical source figures are first-period impact responses.
+            % Historical source figures report first-period impact responses.
             impact_pct(j) = response(1) * 100;
         end
 
@@ -113,7 +169,9 @@ try
         end
         fprintf(fid, 'Calibrations: q=0.2, 0.4, 0.6, 0.8\n');
         fprintf(fid, 'IRF horizon: %d periods\n', irf_horizon);
-        fprintf(fid, 'Random seed: 12345 (specified in each model file)\n');
+        fprintf(fid, 'Random seed: 12345 (specified in original model files)\n');
+        fprintf(fid, 'Committed DSGE source files: unchanged\n');
+        fprintf(fid, 'Runtime-only diagnostic compatibility: resid(1); -> resid;\n');
         fclose(fid);
     end
 
