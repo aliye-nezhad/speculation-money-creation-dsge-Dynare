@@ -8,6 +8,14 @@ a clean Ubuntu 24.04 environment using MATLAB R2023b and the Ubuntu
 R2017a / Dynare 4.6.4 environment. All automated model execution is
 performed in MATLAB R2023b.
 
+The workflow installs both Ubuntu packages pinned to the same release:
+
+- `dynare=6.0-1`, which supplies the Dynare runtime and preprocessor;
+- `dynare-matlab=6.0-1`, which supplies the MATLAB interface.
+
+The MATLAB interface is located from the installed package file list rather
+than assuming that it shares a directory layout with the preprocessor.
+
 The workflow:
 
 1. Verifies with Git that no committed `.mod` file differs from `main`.
