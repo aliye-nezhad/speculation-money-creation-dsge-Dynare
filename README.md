@@ -90,12 +90,13 @@ speculation-money-creation-dsge-dynare/
 ## Automated Reproducibility
 
 The repository includes a GitHub Actions workflow that runs all four
-calibrations in a clean Ubuntu 24.04 / GNU Octave / Dynare 6.0-1 environment.
-It checks model dimensions, finite steady-state and decision-rule outputs,
-40-period impulse responses, and first-period impact responses against the historical
-summary table. The committed DSGE model files remain unchanged; Dynare 6
-compatibility is isolated to disposable runtime copies. This is a modern compatibility test, not an exact recreation
-of the original MATLAB R2017a / Dynare 4.6.4 environment.
+calibrations in a clean Ubuntu 24.04 / MATLAB R2023b / Dynare 6.0-1
+environment. It checks model dimensions, finite steady-state and
+decision-rule outputs, 40-period impulse responses, and first-period impact
+responses against the historical summary table. The committed DSGE model
+files remain unchanged; Dynare 6 compatibility is isolated to disposable
+runtime copies. This is a modern MATLAB execution check, not an exact
+recreation of the original MATLAB R2017a / Dynare 4.6.4 environment.
 
 See [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for the environment,
 validation rules, and local instructions. Generated numerical outputs and logs
