@@ -2,7 +2,7 @@ name: Dynare reproducibility
 
 on:
   push:
-    branches: [main]
+    branches: [main, reproducibility-ci-audit]
   pull_request:
     branches: [main]
   workflow_dispatch:

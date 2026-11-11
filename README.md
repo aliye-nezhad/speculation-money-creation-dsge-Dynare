@@ -102,11 +102,10 @@ The model was historically run with:
 - Dynare 4.6.4;
 - MATLAB R2017a.
 
-The automated compatibility workflow is configured to run the models under
-GNU Octave 8.4.0 and Dynare 6.0 on Ubuntu 24.04. This is a modern compatibility
-test, not an exact recreation of the historical MATLAB/Dynare environment.
-Consult the current [Dynare documentation](https://www.dynare.org/manual/)
-for installation and version-specific guidance.
+Dynare also supports GNU Octave, but this repository package was not
+re-executed under Octave or a newer Dynare release. Consult the current
+[Dynare documentation](https://www.dynare.org/manual/) for installation and
+version-specific guidance.
 
 ## Reproduction
 
