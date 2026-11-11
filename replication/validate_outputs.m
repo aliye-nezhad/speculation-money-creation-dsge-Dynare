@@ -26,7 +26,7 @@ historical = readtable(historical_file);
 summary = readtable(summary_file);
 
 required_historical = [{'productive_loan_share'}, historical_names];
-required_summary = [{'q'}, summary_names};
+required_summary = [{'q'}, summary_names];
 if ~all(ismember(required_historical, historical.Properties.VariableNames))
     error('Historical summary is missing one or more required columns.');
 end
