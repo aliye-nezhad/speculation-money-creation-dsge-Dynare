@@ -11,9 +11,9 @@ performed in MATLAB R2024b.
 The workflow installs the Ubuntu `dynare=6.0-1` package and
 headless plotting tools. The package includes the MATLAB source directory
 and Dynare preprocessor. The workflow adds the packaged MATLAB directory to
-MATLAB R2024b's path and explicitly adds Dynare's `num_procs` fallback
-routine, because the Ubuntu package does not provide a MATLAB-compiled MEX
-directory for this runner. All model execution takes place in MATLAB R2024b.
+MATLAB R2024b's path and adds Dynare's MATLAB fallback routines under `missing/mex`, because
+the Ubuntu package does not provide a MATLAB-compiled MEX directory for
+this runner. All model execution takes place in MATLAB R2024b.
 
 The workflow:
 
