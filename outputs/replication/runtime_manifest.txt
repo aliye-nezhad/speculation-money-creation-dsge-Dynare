@@ -4,9 +4,9 @@ MATLAB platform: GLNXA64
 Dynare version: 6.0
 Dynare MATLAB toolbox URL: https://www.dynare.org/release/matlab-online/dynare-6.0.mltbx
 Dynare MATLAB toolbox SHA-256: 2b09418d141ba3fd077cf2cb97f3aa478a4adf60db11f1ff3f9ec5840da6903f
-Git source commit: 410fb085724ec89f046a7bd9a3c7102879e86260
+Git source commit: e5bc6cda503a1cbcaeb0fd650840e2018625a021
 System OS: Linux
-System image: ubuntu24 20261101.360.1
+System image: ubuntu24 20261111.370.1
 System C++ runtime preloaded: /lib/x86_64-linux-gnu/libstdc++.so.6
 Calibrations: q=0.2, 0.4, 0.6, 0.8
 Endogenous responses exported per calibration: 20
