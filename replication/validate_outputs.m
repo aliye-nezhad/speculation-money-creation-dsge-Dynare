@@ -1,5 +1,5 @@
-% Independently validate all generated IRFs and figures.
-% Historical comparisons are limited to the impact values documented in the source note.
+% Compare the period-one responses with the thesis table.
+% Check the full response files and figures for each calibration.
 
 script_path = mfilename('fullpath');
 repository_root = fileparts(fileparts(script_path));
@@ -101,7 +101,7 @@ for model_index = 1:numel(q_values)
         total_series_validated = total_series_validated + 1;
     end
 
-    % Independently recompute the four historical period-1 impact responses.
+    % Convert the period-one responses to percent deviations.
     for series_index = 1:numel(core_irf_names)
         series_name = core_irf_names{series_index};
         values = irf.(series_name);
@@ -110,7 +110,7 @@ for model_index = 1:numel(q_values)
         stored_values = summary.(summary_names{series_index});
         stored_impact = stored_values(summary_index);
         if ~isfinite(stored_impact) || abs(impact - stored_impact) > 1e-7
-            error('%s %s: runner summary does not match the recomputed period-1 impact.', ...
+            error('%s %s: impact summary differs from the first CSV observation.', ...
                 q_tags{model_index}, summary_names{series_index});
         end
 
@@ -158,16 +158,16 @@ for model_index = 1:numel(q_tags)
 end
 
 report_lines{end + 1, 1} = sprintf( ...
-    'PASS: validated %d endogenous IRF series across four calibrations and 40 periods each.', ...
+    '%d response series across four calibrations, each with 40 finite observations.', ...
     total_series_validated);
 report_lines{end + 1, 1} = sprintf( ...
-    'PASS: %d historical impact-response comparisons within %.2f percentage points.', ...
+    '%d historical impact values matched within %.2f percentage points.', ...
     total_historical_comparisons, tolerance_pp);
 report_lines{end + 1, 1} = sprintf( ...
-    'PASS: %d generated MATLAB PNG figures exist and pass image-dimension checks.', ...
+    '%d figures, each at least 1000 by 600 pixels.', ...
     figure_count);
 report_lines{end + 1, 1} = ...
-    'LIMITATION: historical source data provide impact benchmarks, not full 40-period reference paths.';
+    'The thesis reports historical values for period one.';
 
 report_file = fullfile(generated_directory, 'validation_report.txt');
 fid = fopen(report_file, 'w');
@@ -183,4 +183,4 @@ for line_index = 1:numel(report_lines)
     fprintf('%s\n', report_lines{line_index});
 end
 
-fprintf('\nSUCCESS: numerical outputs, historical impacts, and generated figures validated.\n');
+fprintf('\nComparison report saved to %s\n', report_file);

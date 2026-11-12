@@ -1,5 +1,4 @@
-% Generate reproducible MATLAB figures for every calibration.
-% All plots are created from the committed 40-period CSV outputs.
+% Plot the 40-period impulse responses for each calibration.
 
 script_path = mfilename('fullpath');
 repository_root = fileparts(fileparts(script_path));
@@ -41,7 +40,7 @@ for model_index = 1:numel(q_values)
 
     periods = irf.period(:);
 
-    % Comprehensive figure: all 20 endogenous variables, in model declaration order.
+    % Plot all 20 variables in model declaration order.
     fig = figure('Visible', 'off', 'Color', 'w', 'Position', [80, 80, 1800, 1100]);
     layout = tiledlayout(fig, 4, 5, 'TileSpacing', 'compact', 'Padding', 'compact');
 
@@ -75,7 +74,7 @@ for model_index = 1:numel(q_values)
     exportgraphics(fig, all_variables_file, 'Resolution', 200);
     close(fig);
 
-    % Focused figure: the four variables used in the historical impact table.
+    % Plot the four variables in the historical impact table.
     fig = figure('Visible', 'off', 'Color', 'w', 'Position', [100, 100, 1400, 900]);
     layout = tiledlayout(fig, 2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 
@@ -103,8 +102,5 @@ for model_index = 1:numel(q_values)
     exportgraphics(fig, core_file, 'Resolution', 200);
     close(fig);
 
-    fprintf('PASS: generated comprehensive and core MATLAB figures for q=%.1f.\n', ...
-        q_values(model_index));
+    fprintf('Saved two figures for q = %.1f.\n', q_values(model_index));
 end
-
-fprintf('\nSUCCESS: generated eight MATLAB PNG figures.\n');

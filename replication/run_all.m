@@ -1,6 +1,4 @@
-% Run all four historical loan-allocation calibrations and export every IRF.
-% The committed DSGE model files are never edited by this runner.
-% Dynare 6 compatibility is applied only to disposable runtime copies in MATLAB.
+% Run the four loan-allocation calibrations and save the impulse responses.
 
 script_path = mfilename('fullpath');
 repository_root = fileparts(fileparts(script_path));
@@ -14,8 +12,7 @@ if exist(outputs_directory, 'dir') ~= 7
     mkdir(outputs_directory);
 end
 
-% Remove status and generated data from earlier executions. A failed run must
-% never leave stale files that could be mistaken for current successful output.
+% Remove the previous results and manifests before starting a new run.
 stale_status_files = {
     'runtime_manifest.txt'
     'environment_manifest.txt'
@@ -39,7 +36,7 @@ if exist(figure_directory, 'dir') == 7
     rmdir(figure_directory, 's');
 end
 
-% Recreate the disposable runtime workspace to prevent stale Dynare output.
+% Start with a fresh directory for the Dynare 6 model copies.
 if exist(runtime_directory, 'dir') == 7
     rmdir(runtime_directory, 's');
 end
@@ -63,9 +60,7 @@ expected_endogenous_names = {
 expected_irf_names = strcat(expected_endogenous_names, '_EEPSILONIS');
 irf_horizon = 40;
 
-% Create runtime copies. The sole compatibility edit is to a diagnostic
-% command removed from the Dynare 6 parser. No economic model statement,
-% parameter, shock, or simulation option is edited.
+% Replace the old diagnostic syntax in the Dynare 6 copies.
 legacy_diagnostic = 'resid(1);';
 runtime_diagnostic = 'resid;';
 source_manifest = fullfile(runtime_directory, 'RUNTIME_SOURCE_README.txt');
@@ -73,13 +68,8 @@ manifest_fid = fopen(source_manifest, 'w');
 if manifest_fid < 0
     error('Could not create %s', source_manifest);
 end
-fprintf(manifest_fid, 'Disposable Dynare runtime copies\n');
-fprintf(manifest_fid, '=================================\n');
-fprintf(manifest_fid, 'Original committed files in models/ are not modified.\n');
-fprintf(manifest_fid, 'For Dynare 6 parser compatibility only, each runtime copy replaces\n');
-fprintf(manifest_fid, 'the diagnostic command resid(1); with resid;.\n');
-fprintf(manifest_fid, 'No model equation, calibration, shock specification, or simulation\n');
-fprintf(manifest_fid, 'setting is changed by this compatibility step.\n');
+fprintf(manifest_fid, 'Dynare 6 model copies\n\n');
+fprintf(manifest_fid, 'The only change from models/ is the diagnostic command. resid(1); becomes resid;.\n');
 fclose(manifest_fid);
 
 for model_index = 1:numel(model_files)
@@ -89,7 +79,7 @@ for model_index = 1:numel(model_files)
     source_text = fileread(source_file);
     diagnostic_positions = strfind(source_text, legacy_diagnostic);
 
-    % Fail closed if the expected legacy diagnostic is absent or ambiguous.
+    % Each source file should contain the old diagnostic command once.
     if numel(diagnostic_positions) ~= 1
         error('%s: expected exactly one legacy diagnostic command; found %d.', ...
             model_file, numel(diagnostic_positions));
@@ -121,9 +111,9 @@ try
 
     for model_index = 1:numel(model_files)
         model_file = model_files{model_index};
-        fprintf('\n===== Running runtime copy of %s =====\n', model_file);
+        fprintf('\nRunning %s\n', model_file);
 
-        % noclearall preserves this runner's loop variables between Dynare calls.
+        % Keep the loop variables between calls to Dynare.
         dynare(model_file, 'noclearall');
 
         if ~exist('M_', 'var') || M_.endo_nbr ~= 20 || M_.eq_nbr ~= 20 || M_.exo_nbr ~= 2
@@ -138,9 +128,8 @@ try
                 ~any(isfinite(oo_.dr.eigval(:)))
             error('%s: decision-rule eigenvalues are missing or contain NaN values.', model_file);
         end
-        % Infinite generalized eigenvalues can be valid when the denominator
-        % of the generalized Schur pair is zero. Check the solved decision
-        % rule itself for finite values instead of rejecting those roots.
+        % An infinite generalized eigenvalue is possible when the
+        % denominator of the generalized Schur pair is zero.
         if ~isfield(oo_.dr, 'ghx') || ~isfield(oo_.dr, 'ghu') || ...
                 any(~isfinite(oo_.dr.ghx(:))) || any(~isfinite(oo_.dr.ghu(:)))
             error('%s: decision-rule matrices are missing or non-finite.', model_file);
@@ -149,8 +138,7 @@ try
             error('%s: Dynare did not produce impulse responses.', model_file);
         end
 
-        % Export all 20 endogenous responses to the speculative-return shock,
-        % not just the four series used in the historical impact table.
+        % Select the endogenous responses to the speculative-return shock.
         response_fields = fieldnames(oo_.irfs);
         response_fields = response_fields(endsWith(response_fields, '_EEPSILONIS'));
         response_fields = sort(response_fields);
@@ -209,8 +197,7 @@ try
             q_values(model_index), impact_pct(1), impact_pct(2), impact_pct(3), impact_pct(4));
         fclose(fid);
 
-        fprintf(['PASS: q=%.1f, 20 equations, finite steady state, finite decision rules, ' ...
-            'and 20 finite 40-period IRFs.\n'], q_values(model_index));
+        fprintf('q = %.1f: 20 response series over 40 periods.\n', q_values(model_index));
     end
 
     manifest_file = fullfile(outputs_directory, 'runtime_manifest.txt');
@@ -224,7 +211,7 @@ try
         try
             dynare_version_text = char(string(dynare_version()));
         catch
-            % The pinned toolbox version remains recorded if this helper is absent.
+            % Use the version supplied in the environment if this call fails.
         end
     end
 
@@ -235,18 +222,15 @@ try
     fprintf(fid, 'Dynare MATLAB toolbox URL: %s\n', getenv('DYNARE_MLTBX_URL'));
     fprintf(fid, 'Dynare MATLAB toolbox SHA-256: %s\n', getenv('DYNARE_MLTBX_SHA256'));
     fprintf(fid, 'Git source commit: %s\n', getenv('GITHUB_SHA'));
-    fprintf(fid, 'Runner OS: %s\n', getenv('RUNNER_OS'));
-    fprintf(fid, 'Runner image: %s %s\n', getenv('ImageOS'), getenv('ImageVersion'));
+    fprintf(fid, 'System OS: %s\n', getenv('RUNNER_OS'));
+    fprintf(fid, 'System image: %s %s\n', getenv('ImageOS'), getenv('ImageVersion'));
     fprintf(fid, 'System C++ runtime preloaded: %s\n', getenv('SYSTEM_LIBSTDCXX'));
     fprintf(fid, 'Calibrations: q=0.2, 0.4, 0.6, 0.8\n');
     fprintf(fid, 'Endogenous responses exported per calibration: 20\n');
     fprintf(fid, 'IRF horizon: %d periods\n', irf_horizon);
     fprintf(fid, 'Simulation periods: 5000\n');
     fprintf(fid, 'Random seed: 12345 (specified in original model files)\n');
-    fprintf(fid, 'Committed DSGE source files: unchanged and checked by Git blob IDs\n');
-    fprintf(fid, 'Runtime-only diagnostic compatibility: resid(1); -> resid;\n');
-    fprintf(fid, 'Octave: not installed; MATLAB is the only model execution engine\n');
-    fprintf(fid, 'Project Python code: none; no Python command is used by the replication workflow\n');
+    fprintf(fid, 'Dynare 6 diagnostic syntax: resid;\n');
     fclose(fid);
 
     cd(original_directory);
@@ -255,4 +239,4 @@ catch model_error
     rethrow(model_error);
 end
 
-fprintf('\nSUCCESS: all four model calibrations completed.\n');
+fprintf('\nFinished all four calibrations.\n');

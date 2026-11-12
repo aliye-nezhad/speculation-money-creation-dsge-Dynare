@@ -14,7 +14,7 @@ q=0.8 M_EEPSILONIS: period-1 impact=2.0625%, historical=2.0625%, difference=0.00
 q=0.8 Y_EEPSILONIS: period-1 impact=-0.1842%, historical=-0.1841%, difference=0.0001 pp
 q=0.8 P_EEPSILONIS: period-1 impact=1.5526%, historical=1.5525%, difference=0.0001 pp
 q=0.8 PPI_EEPSILONIS: period-1 impact=1.5526%, historical=1.5525%, difference=0.0001 pp
-PASS: validated 80 endogenous IRF series across four calibrations and 40 periods each.
-PASS: 16 historical impact-response comparisons within 0.02 percentage points.
-PASS: 8 generated MATLAB PNG figures exist and pass image-dimension checks.
-LIMITATION: historical source data provide impact benchmarks, not full 40-period reference paths.
+80 response series across four calibrations, each with 40 finite observations.
+16 historical impact values matched within 0.02 percentage points.
+8 figures, each at least 1000 by 600 pixels.
+The thesis reports historical values for period one.

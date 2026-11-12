@@ -22,6 +22,5 @@ models/speculation_money_creation_q*_IRF_*.*
 Thumbs.db
 *~
 
-# Disposable Dynare execution copies only.
-# Validated CSV, TXT, and PNG outputs under outputs/replication are committed.
+# Temporary Dynare 6 model copies
 outputs/replication/runtime_workspace/

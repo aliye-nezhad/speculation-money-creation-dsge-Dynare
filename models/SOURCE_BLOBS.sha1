@@ -1,5 +1,5 @@
 # Git blob object IDs for the preserved original model specifications.
-# CI verifies these exact contents with: git hash-object <path>
+# Compare a file with its recorded ID using git hash-object <path>.
 288f3ccca5ad38cbb6fc11993bd47733735d2f1d  models/speculation_money_creation_q02.mod
 962da6b48ccf17a11fa77e7315af782724bd9e15  models/speculation_money_creation_q04.mod
 787efbd837e406cb781b1bc80b1e6a843af56ce6  models/speculation_money_creation_q06.mod

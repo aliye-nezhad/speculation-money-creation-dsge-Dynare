@@ -29,7 +29,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # actions/checkout v6
 
-      - name: Verify model-source integrity and MATLAB-only project code
+      - name: Check model files and MATLAB setup
         shell: bash
         run: |
           set -euo pipefail
@@ -47,7 +47,7 @@ jobs:
               echo "Actual Git blob:   $actual_blob"
               exit 1
             fi
-            echo "PASS: $model_file matches its preserved source blob."
+              echo "$model_file matches its recorded Git blob ID."
           done < models/SOURCE_BLOBS.sha1
 
           if git ls-files '*.py' '*.pyc' | grep -q .; then
@@ -58,16 +58,14 @@ jobs:
 
           if grep -R -nE '(^|[[:space:]])python(3)?([[:space:]]|$)' \
               .github/workflows replication; then
-            echo "::error::A Python command was found in the replication workflow or scripts."
+            echo "::error::A replication file contains a Python command."
             exit 1
           fi
 
           if command -v octave >/dev/null 2>&1; then
-            echo "::error::Octave is installed; this workflow is intended to execute in MATLAB only."
+            echo "::error::The MATLAB environment must be set up without Octave."
             exit 1
           fi
-
-          echo "PASS: model source integrity verified; no project Python code or Octave runtime."
 
       - name: Install MATLAB and plotting system dependencies
         shell: bash
@@ -141,7 +139,7 @@ jobs:
 
           toolbox_sha256="$(sha256sum "$toolbox_path" | awk '{print $1}')"
           if [ "$toolbox_sha256" != "$DYNARE_MLTBX_SHA256_EXPECTED" ]; then
-            echo "::error::Dynare toolbox checksum differs from the reviewed, pinned package."
+            echo "::error::Dynare toolbox checksum differs from the expected SHA-256."
             echo "Expected: $DYNARE_MLTBX_SHA256_EXPECTED"
             echo "Actual:   $toolbox_sha256"
             exit 1
@@ -157,7 +155,7 @@ jobs:
             system_libstdcxx = getenv('SYSTEM_LIBSTDCXX');
             assert(isfile(system_libstdcxx), 'System C++ runtime was not found.');
             setenv('LD_PRELOAD', system_libstdcxx);
-            assert(strcmp(version('-release'), '2024b'), 'This workflow requires MATLAB R2024b.');
+            assert(strcmp(version('-release'), '2024b'), 'Use MATLAB R2024b for this run.');
             toolbox_file = getenv('DYNARE_MLTBX_PATH');
             assert(isfile(toolbox_file), 'Dynare MATLAB toolbox file was not found.');
             matlab.addons.install(toolbox_file, true);
@@ -172,7 +170,7 @@ jobs:
             assert(exist('mjdgges', 'file') == 2 || exist('mjdgges', 'file') == 3, 'Dynare generalized Schur routine is unavailable.');
             run('replication/run_all.m');
 
-      - name: Record the exact runner environment and model checksums
+      - name: Record software versions and model checksums
         shell: bash
         run: |
           set -euo pipefail
@@ -185,17 +183,14 @@ jobs:
 
           {
             echo "Source commit: $GITHUB_SHA"
-            echo "Workflow: $GITHUB_WORKFLOW"
-            echo "Runner OS: $RUNNER_OS"
-            echo "Runner image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+            echo "System OS: $RUNNER_OS"
+            echo "System image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
             echo "Operating system: $(. /etc/os-release && printf '%s' "$PRETTY_NAME")"
             echo "Kernel: $(uname -sr)"
             echo "Dynare version: $DYNARE_VERSION"
             echo "Dynare MATLAB toolbox URL: $DYNARE_MLTBX_URL"
             echo "Dynare MATLAB toolbox SHA-256: $DYNARE_MLTBX_SHA256"
-            echo "Octave executable: absent (checked before and after setup)"
-            echo "Project Python source files: none (checked)"
-            echo "Python commands in project workflow and replication scripts: none (checked)"
+            echo "Octave executable: absent"
             echo
             echo "MATLAB runtime manifest:"
             cat outputs/replication/runtime_manifest.txt
@@ -208,7 +203,7 @@ jobs:
               libvorbisenc2 | sort
           } > outputs/replication/environment_manifest.txt
 
-      - name: Generate MATLAB figures and validate numerical outputs
+      - name: Plot responses and compare results
         uses: matlab-actions/run-command@bfa857648f4895aa98a446fe41c85e0788421ed5 # matlab-actions/run-command v3
         with:
           command: |
@@ -222,7 +217,7 @@ jobs:
             run('replication/plot_irfs.m');
             run('replication/validate_outputs.m');
 
-      - name: Upload generated results and reproducibility manifests
+      - name: Archive the replication results
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # actions/upload-artifact v6
         with:
@@ -231,7 +226,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
-      - name: Commit validated replication outputs to main
+      - name: Save the replication results
         if: success() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
@@ -240,7 +235,7 @@ jobs:
           git fetch origin main --depth=1
           remote_main="$(git rev-parse origin/main)"
           if [ "$remote_main" != "$GITHUB_SHA" ]; then
-            echo "::warning::main advanced during this run; results remain available as an artifact and were not committed to a newer source revision."
+            echo "::warning::main moved during the run. The results are attached to this run."
             exit 0
           fi
 
@@ -257,9 +252,9 @@ jobs:
             outputs/replication/figures/*.png
 
           if git diff --cached --quiet; then
-            echo "Generated replication outputs are unchanged; no commit is necessary."
+            echo "The results match the files already in the repository."
             exit 0
           fi
 
-          git commit -m "chore: refresh validated replication outputs [skip ci]"
+          git commit -m "Update thesis replication results" -m "[skip ci]"
           git push origin HEAD:main
