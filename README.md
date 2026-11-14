@@ -53,16 +53,11 @@ see the [reproduction guide](docs/REPRODUCIBILITY.md).
 ## Repository structure
 
 ~~~text
-├── .gitattributes
-├── .github/
-│   └── workflows/
-│       └── dynare-replication.yml
-├── .gitignore
-├── LICENSE
-├── README.md
 ├── docs/
 │   ├── REPRODUCIBILITY.md
 │   └── speculation_money_creation_research_note.pdf
+├── .github/workflows/
+│   └── dynare-replication.yml
 ├── models/
 │   ├── README.md
 │   ├── SOURCE_BLOBS.sha1
@@ -70,6 +65,10 @@ see the [reproduction guide](docs/REPRODUCIBILITY.md).
 │   ├── speculation_money_creation_q04.mod
 │   ├── speculation_money_creation_q06.mod
 │   └── speculation_money_creation_q08.mod
+├── replication/
+│   ├── plot_irfs.m
+│   ├── run_all.m
+│   └── validate_outputs.m
 ├── outputs/
 │   ├── figures/
 │   │   ├── q02_core_irfs.png
@@ -100,10 +99,10 @@ see the [reproduction guide](docs/REPRODUCIBILITY.md).
 │   │   └── validation_report.txt
 │   └── tables/
 │       └── historical_irf_summary.csv
-└── replication/
-    ├── plot_irfs.m
-    ├── run_all.m
-    └── validate_outputs.m
+├── .gitattributes
+├── .gitignore
+├── LICENSE
+└── README.md
 ~~~
 
 ## Author
