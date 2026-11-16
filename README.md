@@ -3,7 +3,7 @@
 I built this model for my master's thesis to study what happens when returns
 to speculation rise and borrowers can divert some bank credit away from
 production. The model is a closed-economy, cash-in-advance DSGE calibrated
-to Iran. The research note explains the mechanism and calibration.
+to Iran. The research note explains the mechanism and calibration. 
 [Research note](docs/speculation_money_creation_research_note.pdf)
 
 ## Model and results
